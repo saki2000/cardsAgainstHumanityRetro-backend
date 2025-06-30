@@ -69,4 +69,4 @@ jobs:
           version_label: ${{ github.sha}}
           region: ${{ env.AWS_REGION }}
           existing_bucket_name: 'elasticbeanstalk-eu-west-2-930964825207'
-          deployment_package: target/retro-against-humanity-backend-${{ env.VERSION }}.jar
+          deployment_package: ${{ env.ARTIFACT_NAME }}-${{ needs.build.outputs.version }}.jar
