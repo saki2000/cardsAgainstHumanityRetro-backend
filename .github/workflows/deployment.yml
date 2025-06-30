@@ -40,6 +40,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Extract version from POM
+        id: extract_version
+        run: echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+
       - name: Deploy
         uses: einaregilsson/beanstalk-deploy@v22
         with:
@@ -50,4 +54,4 @@ jobs:
           version_label: ${{ github.sha}}
           region: ${{ env.AWS_REGION }}
           existing_bucket_name: 'elasticbeanstalk-eu-west-2-930964825207'
-          deployment_package: target/retro-against-humanity-backend-1.0.0.jar
+          deployment_package: target/retro-against-humanity-backend-${{ env.VERSION }}.jar
