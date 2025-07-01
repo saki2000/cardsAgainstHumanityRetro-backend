@@ -1,11 +1,10 @@
 package com.retro.retro_against_humanity_backend.Controllers;
 
 import com.retro.retro_against_humanity_backend.Service.SessionService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.retro.retro_against_humanity_backend.dto.SessionCreateRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/session")
@@ -15,10 +14,16 @@ public class SessionController {
     private final SessionService sessionService;
 
     @PostMapping("/create")
-    public ResponseEntity<String> createSession() {
-        String sessionId = sessionService.create();
+    public ResponseEntity<String> createSession(@RequestBody SessionCreateRequest request) {
+        String sessionId = sessionService.create(request);
         return ResponseEntity.ok(sessionId);
     }
-}
+
+    @GetMapping("/check/{sessionId}")
+    public ResponseEntity<String> checkSession(@PathVariable String sessionId) {
+        // Implement your session check logic here
+        return ResponseEntity.ok("Session checked: " + sessionId);
+    }
+};
 
 
