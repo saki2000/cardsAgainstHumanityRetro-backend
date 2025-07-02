@@ -13,6 +13,11 @@ public class SessionController {
 
     private final SessionService sessionService;
 
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping() {
+        return ResponseEntity.ok("pong");
+    }
+
     @PostMapping("/create")
     public ResponseEntity<String> createSession(@RequestBody SessionCreateRequest request) {
         String sessionId = sessionService.create(request);
