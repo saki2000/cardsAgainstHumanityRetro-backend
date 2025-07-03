@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.hamcrest.Matchers.hasItem;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -78,6 +79,30 @@ public class SessionControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.name", is("Name cannot be null")))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void checkSession_shouldReturnOk_whenSessionIdValid() throws Exception {
+        mockMvc.perform(get("/session/check/abc123"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Session checked: abc123"));
+    }
+
+    @Test
+    void checkSession_shouldReturnBadRequest_whenSessionIdTooShort() throws Exception {
+        mockMvc.perform(get("/session/check/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.messages[0]", is("Session ID must be exactly 6 characters")))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+
+    @Test
+    void checkSession_shouldReturnBadRequest_whenSessionIdNotAlphanumeric() throws Exception {
+        mockMvc.perform(get("/session/check/abc!@#"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.messages", hasItem("Session ID must be alphanumeric")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 }
