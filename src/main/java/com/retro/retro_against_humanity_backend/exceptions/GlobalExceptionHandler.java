@@ -1,4 +1,4 @@
-package com.retro.retro_against_humanity_backend.Exceptions;
+package com.retro.retro_against_humanity_backend.exceptions;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -54,5 +54,15 @@ public class GlobalExceptionHandler {
                 messages
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                "Internal Server Error",
+                request.getRequestURI(),
+                "An unexpected error occurred. Please try again later."
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

@@ -1,9 +1,9 @@
-package com.retro.retro_against_humanity_backend.Controllers;
+package com.retro.retro_against_humanity_backend.controllers;
 
-import com.retro.retro_against_humanity_backend.Constants.Const;
-import com.retro.retro_against_humanity_backend.Dto.SessionCreateRequest;
-import com.retro.retro_against_humanity_backend.Exceptions.GlobalExceptionHandler;
-import com.retro.retro_against_humanity_backend.Service.SessionService;
+import com.retro.retro_against_humanity_backend.errors.Constants;
+import com.retro.retro_against_humanity_backend.dto.SessionCreateRequest;
+import com.retro.retro_against_humanity_backend.exceptions.GlobalExceptionHandler;
+import com.retro.retro_against_humanity_backend.service.SessionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -107,7 +107,7 @@ public class SessionControllerTest {
         mockMvc.perform(get("/session/check/" + SESSION_CODE_TOO_SHORT))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error", is("Constraint Violation")))
-                .andExpect(jsonPath("$.details[0]", is(Const.SESSION_CODE_SIZE_MESSAGE)))
+                .andExpect(jsonPath("$.details[0]", is(Constants.Session.SESSION_CODE_SIZE_MESSAGE)))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -116,7 +116,7 @@ public class SessionControllerTest {
         mockMvc.perform(get("/session/check/" + SESSION_CODE_NOT_ALPHANUMERIC))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error", is("Constraint Violation")))
-                .andExpect(jsonPath("$.details", hasItem(Const.SESSION_CODE_PATTERN_MESSAGE)))
+                .andExpect(jsonPath("$.details", hasItem(Constants.Session.SESSION_CODE_PATTERN_MESSAGE)))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -133,7 +133,7 @@ public class SessionControllerTest {
         mockMvc.perform(delete("/session/delete/"+ SESSION_CODE_TOO_SHORT))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error", is("Constraint Violation")))
-                .andExpect(jsonPath("$.details[0]", is(Const.SESSION_CODE_SIZE_MESSAGE)))
+                .andExpect(jsonPath("$.details[0]", is(Constants.Session.SESSION_CODE_SIZE_MESSAGE)))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -142,7 +142,7 @@ public class SessionControllerTest {
         mockMvc.perform(delete("/session/delete/" + SESSION_CODE_NOT_ALPHANUMERIC))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error", is("Constraint Violation")))
-                .andExpect(jsonPath("$.details", hasItem(Const.SESSION_CODE_SIZE_MESSAGE)))
+                .andExpect(jsonPath("$.details", hasItem(Constants.Session.SESSION_CODE_SIZE_MESSAGE)))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 }

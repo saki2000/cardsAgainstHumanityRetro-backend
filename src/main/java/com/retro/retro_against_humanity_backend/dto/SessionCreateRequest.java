@@ -1,4 +1,4 @@
-package com.retro.retro_against_humanity_backend.Dto;
+package com.retro.retro_against_humanity_backend.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Email;

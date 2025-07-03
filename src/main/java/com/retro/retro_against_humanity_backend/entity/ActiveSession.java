@@ -1,4 +1,4 @@
-package com.retro.retro_against_humanity_backend.Entity;
+package com.retro.retro_against_humanity_backend.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
