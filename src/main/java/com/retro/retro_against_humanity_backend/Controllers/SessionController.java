@@ -5,6 +5,7 @@ import com.retro.retro_against_humanity_backend.dto.SessionCreateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/session")
@@ -19,7 +20,7 @@ public class SessionController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<String> createSession(@RequestBody SessionCreateRequest request) {
+    public ResponseEntity<String> createSession(@Valid @RequestBody SessionCreateRequest request) {
         String sessionId = sessionService.create(request);
         return ResponseEntity.ok(sessionId);
     }
