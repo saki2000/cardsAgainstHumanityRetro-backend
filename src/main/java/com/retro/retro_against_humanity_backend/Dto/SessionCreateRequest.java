@@ -1,6 +1,5 @@
-package com.retro.retro_against_humanity_backend.dto;
+package com.retro.retro_against_humanity_backend.Dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Email;
 import lombok.Data;
