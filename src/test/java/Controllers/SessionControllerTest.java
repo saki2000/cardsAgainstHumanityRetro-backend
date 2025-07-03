@@ -1,24 +1,25 @@
 package com.retro.retro_against_humanity_backend.Controllers;
 
+import com.retro.retro_against_humanity_backend.Exceptions.GlobalExceptionHandler;
 import com.retro.retro_against_humanity_backend.Service.SessionService;
 import com.retro.retro_against_humanity_backend.dto.SessionCreateRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import static org.hamcrest.Matchers.is;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.hamcrest.Matchers.hasItem;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(SessionController.class)
+@Import(GlobalExceptionHandler.class)
 public class SessionControllerTest {
 
     @Autowired
@@ -56,7 +57,8 @@ public class SessionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.email", is("Invalid email format")))
+                .andExpect(jsonPath("$.error", is("Validation Error")))
+                .andExpect(jsonPath("$.details.email", is("Invalid email format")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -67,7 +69,8 @@ public class SessionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.email", is("Email cannot be null")))
+                .andExpect(jsonPath("$.error", is("Validation Error")))
+                .andExpect(jsonPath("$.details.email", is("Email cannot be null")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -78,7 +81,8 @@ public class SessionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.name", is("Name cannot be null")))
+                .andExpect(jsonPath("$.error", is("Validation Error")))
+                .andExpect(jsonPath("$.details.name", is("Name cannot be null")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -93,7 +97,8 @@ public class SessionControllerTest {
     void checkSession_shouldReturnBadRequest_whenSessionIdTooShort() throws Exception {
         mockMvc.perform(get("/session/check/abc"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.messages[0]", is("Session ID must be exactly 6 characters")))
+                .andExpect(jsonPath("$.error", is("Constraint Violation")))
+                .andExpect(jsonPath("$.details[0]", is("Session ID must be exactly 6 characters")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -102,7 +107,8 @@ public class SessionControllerTest {
     void checkSession_shouldReturnBadRequest_whenSessionIdNotAlphanumeric() throws Exception {
         mockMvc.perform(get("/session/check/abc!@#"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.messages", hasItem("Session ID must be alphanumeric")))
+                .andExpect(jsonPath("$.error", is("Constraint Violation")))
+                .andExpect(jsonPath("$.details", hasItem("Session ID must be alphanumeric")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 }
