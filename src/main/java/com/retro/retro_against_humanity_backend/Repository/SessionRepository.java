@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SessionRepository extends JpaRepository<ActiveSession, String> {
     boolean existsByCode(String code);
+    void deleteByCode(String code);
 }

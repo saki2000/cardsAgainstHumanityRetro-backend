@@ -7,6 +7,7 @@ import com.retro.retro_against_humanity_backend.Dto.SessionCreateRequest;
 import com.retro.retro_against_humanity_backend.error.SessionNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -36,10 +37,11 @@ public class SessionService {
         }
     }
 
+    @Transactional
     public void deleteSession(String sessionCode) {
-        ActiveSession session = sessionRepository.findById(sessionCode)
-                .orElseThrow(() -> new SessionNotFoundException(Const.SESSION_NOT_FOUND_MESSAGE));
-
-        sessionRepository.delete(session);
+        if (!sessionRepository.existsByCode(sessionCode)) {
+            throw new SessionNotFoundException(Const.SESSION_NOT_FOUND_MESSAGE);
+        }
+        sessionRepository.deleteByCode(sessionCode);
     }
 }
