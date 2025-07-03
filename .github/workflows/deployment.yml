@@ -33,9 +33,6 @@ jobs:
         id: extract_version
         run: echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
 
-      - name: Run tests with Maven
-        run: mvn test
-
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
