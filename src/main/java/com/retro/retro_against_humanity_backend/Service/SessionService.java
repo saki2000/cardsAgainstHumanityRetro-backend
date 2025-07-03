@@ -1,8 +1,9 @@
 package com.retro.retro_against_humanity_backend.Service;
 
+import com.retro.retro_against_humanity_backend.Constants.Const;
 import com.retro.retro_against_humanity_backend.Entity.ActiveSession;
 import com.retro.retro_against_humanity_backend.Repository.SessionRepository;
-import com.retro.retro_against_humanity_backend.dto.SessionCreateRequest;
+import com.retro.retro_against_humanity_backend.Dto.SessionCreateRequest;
 import com.retro.retro_against_humanity_backend.error.SessionNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,10 +29,17 @@ public class SessionService {
         return sessionId;
     }
 
-    public void checkActiveSessions(String sessionId) {
-        boolean session = sessionRepository.existsByCode(sessionId);
+    public void checkActiveSessions(String sessionCode) {
+        boolean session = sessionRepository.existsByCode(sessionCode);
         if (!session) {
-            throw new SessionNotFoundException("Session not found");
+            throw new SessionNotFoundException(Const.SESSION_NOT_FOUND_MESSAGE);
         }
+    }
+
+    public void deleteSession(String sessionCode) {
+        ActiveSession session = sessionRepository.findById(sessionCode)
+                .orElseThrow(() -> new SessionNotFoundException(Const.SESSION_NOT_FOUND_MESSAGE));
+
+        sessionRepository.delete(session);
     }
 }
