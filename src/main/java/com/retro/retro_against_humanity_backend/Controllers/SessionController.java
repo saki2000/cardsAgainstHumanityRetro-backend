@@ -36,7 +36,8 @@ public class SessionController {
             @Size(min = 6, max = 6, message = "Session ID must be exactly 6 characters")
             @Pattern(regexp = "^[a-zA-Z0-9]+$", message = "Session ID must be alphanumeric")
             String sessionId) {
-        return ResponseEntity.ok("Session checked: " + sessionId);
+        sessionService.checkActiveSessions(sessionId);
+        return ResponseEntity.ok(sessionId);
     }
 };
 
