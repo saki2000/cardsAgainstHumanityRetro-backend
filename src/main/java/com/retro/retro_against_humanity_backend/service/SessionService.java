@@ -4,7 +4,7 @@ import com.retro.retro_against_humanity_backend.dto.SessionCreateRequest;
 import com.retro.retro_against_humanity_backend.errors.Constants;
 import com.retro.retro_against_humanity_backend.entity.ActiveSession;
 import com.retro.retro_against_humanity_backend.repository.SessionRepository;
-import com.retro.retro_against_humanity_backend.error.SessionNotFoundException;
+import com.retro.retro_against_humanity_backend.exceptions.SessionNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
