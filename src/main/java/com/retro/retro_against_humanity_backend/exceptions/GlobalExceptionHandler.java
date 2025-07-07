@@ -1,5 +1,6 @@
 package com.retro.retro_against_humanity_backend.exceptions;
 
+import com.retro.retro_against_humanity_backend.errors.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
