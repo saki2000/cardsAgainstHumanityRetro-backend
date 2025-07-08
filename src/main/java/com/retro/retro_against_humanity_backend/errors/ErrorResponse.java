@@ -1,4 +1,4 @@
-package com.retro.retro_against_humanity_backend.exceptions;
+package com.retro.retro_against_humanity_backend.errors;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Value;
