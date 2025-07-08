@@ -37,6 +37,7 @@ public class GameSocketModule {
             server.getRoomOperations(sessionCode).sendEvent("update_user_list", allUsers);
         }
         System.out.println("Client disconnected: " + client.getSessionId());
+        server.getRoomOperations(sessionCode).sendEvent("player_left", username);
     }
 
     private void onJoinSession(SocketIOClient client, UserPayload payload, AckRequest ackRequest) {
@@ -45,10 +46,31 @@ public class GameSocketModule {
             client.sendEvent("error", "Session code is required.");
             return;
         }
+
+        List<UserPayload> allUsers = userService.getAllUsersInSession(sessionCode);
+        boolean userExists = allUsers.stream()
+                .anyMatch(u -> u.getUsername().equalsIgnoreCase(payload.getUsername()));
+        if (userExists) {
+            client.sendEvent("error", "User already joined this session.");
+            return;
+        }
+
         client.set("sessionCode", sessionCode);
         client.set("username", payload.getUsername());
         client.joinRoom(sessionCode);
-        List<UserPayload> allUsers = userService.addUserToSessionAndGetAll(payload, sessionCode);
-        server.getRoomOperations(sessionCode).sendEvent("update_user_list", allUsers);
+        List<UserPayload> updatedList = userService.addUserToSessionAndGetAll(payload, sessionCode);
+        server.getRoomOperations(sessionCode).sendEvent("update_user_list", updatedList);
+        server.getRoomOperations(sessionCode).sendEvent("player_joined", payload.getUsername());
+    }
+
+    private void onLeaveSession(SocketIOClient client, UserPayload payload,  AckRequest ackRequest) {
+        String sessionCode = payload.getSessionCode();
+        if (sessionCode != null && !sessionCode.trim().isEmpty()) {
+            userService.removeUserFromSessionByUsername(payload.getUsername(), sessionCode);
+            client.leaveRoom(sessionCode);
+            List<UserPayload> allUsers = userService.getAllUsersInSession(sessionCode);
+            server.getRoomOperations(sessionCode).sendEvent("update_user_list", allUsers);
+            server.getRoomOperations(sessionCode).sendEvent("player_left", payload.getUsername());
+        }
     }
 }
