@@ -17,4 +17,9 @@ public class ServerCommandLineRunner implements CommandLineRunner {
     public void run(String... args) throws Exception {
         server.start();
     }
+
+    @PreDestroy
+    public void stopServer() {
+        server.stop();
+    }
 }
