@@ -3,7 +3,7 @@ package com.retro.retro_against_humanity_backend.service;
 import com.retro.retro_against_humanity_backend.dto.SessionCreateRequest;
 import com.retro.retro_against_humanity_backend.errors.Constants;
 import com.retro.retro_against_humanity_backend.entity.ActiveSession;
-import com.retro.retro_against_humanity_backend.repository.SessionRepository;
+import com.retro.retro_against_humanity_backend.repository.ActiveSessionRepository;
 import com.retro.retro_against_humanity_backend.exceptions.SessionNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,7 +15,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SessionService {
 
-    private final SessionRepository sessionRepository;
+    private final ActiveSessionRepository activeSessionRepository;
 
     public String create(SessionCreateRequest request) {
         String sessionId = UUID.randomUUID().toString().substring(0, 6);
@@ -25,13 +25,13 @@ public class SessionService {
         session.setEmail(request.getEmail());
         session.setUsername(request.getName());
 
-        sessionRepository.save(session);
+        activeSessionRepository.save(session);
 
         return sessionId;
     }
 
     public void checkActiveSessions(String sessionCode) {
-        boolean session = sessionRepository.existsByCode(sessionCode);
+        boolean session = activeSessionRepository.existsByCode(sessionCode);
         if (!session) {
             throw new SessionNotFoundException(Constants.Session.SESSION_NOT_FOUND_MESSAGE);
         }
@@ -39,9 +39,9 @@ public class SessionService {
 
     @Transactional
     public void deleteSession(String sessionCode) {
-        if (!sessionRepository.existsByCode(sessionCode)) {
+        if (!activeSessionRepository.existsByCode(sessionCode)) {
             throw new SessionNotFoundException(Constants.Session.SESSION_NOT_FOUND_MESSAGE);
         }
-        sessionRepository.deleteByCode(sessionCode);
+        activeSessionRepository.deleteByCode(sessionCode);
     }
 }
