@@ -27,9 +27,13 @@ public class UserService {
 
         ActiveSession session = sessionRepository.findByCode(sessionCode)
                 .orElseThrow(() -> new EntityNotFoundException("Session with code " + sessionCode + " not found"));
-
-        if (!sessionPlayerRepository.existsByUserAndSession(user, session)) {
-            sessionPlayerRepository.save(new SessionPlayer(null, session, user, 0));
+        //Had possible race here...
+        try {
+            if (!sessionPlayerRepository.existsByUserAndSession(user, session)) {
+                sessionPlayerRepository.save(new SessionPlayer(null, session, user, 0));
+            }
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Ignore: another thread inserted the same user-session pair
         }
 
         return sessionPlayerRepository.findBySession(session).stream()
