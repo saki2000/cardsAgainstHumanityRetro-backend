@@ -1,6 +1,7 @@
 package com.retro.retro_against_humanity_backend.service;
 
 import com.corundumstudio.socketio.SocketIOServer;
+import jakarta.annotation.PreDestroy;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
