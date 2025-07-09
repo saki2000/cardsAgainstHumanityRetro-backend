@@ -5,7 +5,6 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.retro.retro_against_humanity_backend.dto.GameStateDto;
 import com.retro.retro_against_humanity_backend.dto.JoinSessionPayload;
-import com.retro.retro_against_humanity_backend.dto.LeaveSessionPayload;
 import com.retro.retro_against_humanity_backend.service.GameSessionService;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
@@ -48,7 +47,8 @@ public class GameSocketModule {
                     () -> {
                         broadcastGameState(data.sessionCode());
                         server.getRoomOperations(data.sessionCode()).sendEvent("player_left", data.username());
-                    }
+                    },
+                    () -> server.getRoomOperations(data.sessionCode()).sendEvent("host_change", data.username())
             );
         }
     }
