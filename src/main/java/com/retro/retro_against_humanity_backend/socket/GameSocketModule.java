@@ -31,7 +31,7 @@ public class GameSocketModule {
         server.addConnectListener(this::onConnect);
         server.addDisconnectListener(this::onDisconnect);
         server.addEventListener("join_session", JoinSessionPayload.class, this::onJoinSession);
-        server.addEventListener("leave_session", LeaveSessionPayload.class, this::onLeaveSession);
+//        server.addEventListener("leave_session", LeaveSessionPayload.class, this::onLeaveSession);
     }
 
     private void onConnect(SocketIOClient client) {
@@ -42,9 +42,14 @@ public class GameSocketModule {
         System.out.println("Client disconnected: " + client.getSessionId());
         ClientData data = clientDataMap.remove(client.getSessionId().toString());
         if (data != null) {
-            gameSessionService.leaveSession(data.sessionCode(), data.username());
-            broadcastGameState(data.sessionCode());
-            server.getRoomOperations(data.sessionCode).sendEvent("player_left", data.username);
+            gameSessionService.leaveSession(
+                    data.sessionCode(),
+                    data.username(),
+                    () -> {
+                        broadcastGameState(data.sessionCode());
+                        server.getRoomOperations(data.sessionCode()).sendEvent("player_left", data.username());
+                    }
+            );
         }
     }
 
@@ -56,13 +61,13 @@ public class GameSocketModule {
         server.getRoomOperations(payload.getSessionCode()).sendEvent("player_joined", payload.getUsername());
     }
 
-    //TODO: Think this is just disconnect now, not leave - same same(?)
-    private void onLeaveSession(SocketIOClient client, LeaveSessionPayload payload, AckRequest ackRequest) {
-        client.leaveRoom(payload.getSessionCode());
-        gameSessionService.leaveSession(payload.getSessionCode(), payload.getUsername());
-        broadcastGameState(payload.getSessionCode());
-        server.getRoomOperations(payload.getSessionCode()).sendEvent("player_left", payload.getUsername());
-    }
+//    //TODO: Think this is just disconnect now, not leave - same same(?)
+//    private void onLeaveSession(SocketIOClient client, LeaveSessionPayload payload, AckRequest ackRequest) {
+//        client.leaveRoom(payload.getSessionCode());
+//        gameSessionService.leaveSession(payload.getSessionCode(), payload.getUsername());
+//        broadcastGameState(payload.getSessionCode());
+//        server.getRoomOperations(payload.getSessionCode()).sendEvent("player_left", payload.getUsername());
+//    }
 
     private void broadcastGameState(String sessionCode) {
         try {

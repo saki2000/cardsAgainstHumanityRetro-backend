@@ -53,7 +53,7 @@ public class GameSessionService {
     }
 
     @Transactional
-    public void leaveSession(String sessionCode, String username) {
+    public void leaveSession(String sessionCode, String username, Runnable broadcastLeave) {
         Users user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
 
@@ -62,16 +62,18 @@ public class GameSessionService {
 
         sessionPlayerRepository.deleteByUserAndSession(user, session);
 
+        broadcastLeave.run();
+
         if (user.getId().equals(session.getHostUserId())) {
             Optional<SessionPlayer> nextHostPlayer = sessionPlayerRepository
                     .findFirstBySessionOrderByCreatedAtAsc(session);
 
             if (nextHostPlayer.isPresent()) {
                 session.setHostUserId(nextHostPlayer.get().getUser().getId());
+                sessionRepository.save(session);
             } else {
-                session.setHostUserId(null);
+                sessionRepository.delete(session);
             }
-            sessionRepository.save(session);
         }
     }
 
