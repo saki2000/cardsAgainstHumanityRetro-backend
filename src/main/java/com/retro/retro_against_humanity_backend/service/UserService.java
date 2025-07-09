@@ -11,51 +11,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RequiredArgsConstructor
 @Service
+@RequiredArgsConstructor
 public class UserService {
+
     private final UserRepository userRepository;
-    private final ActiveSessionRepository sessionRepository;
-    private final SessionPlayerRepository sessionPlayerRepository;
 
     @Transactional
-    public List<UserPayload> addUserToSessionAndGetAll(UserPayload userPayload, String sessionCode) {
-        Users user = userRepository.findByUsername(userPayload.getUsername())
+    public Users findOrCreateUser(String username, String email) {
+        return userRepository.findByUsername(username)
                 .orElseGet(() -> userRepository.save(
-                        new Users(null, userPayload.getEmail(), userPayload.getUsername(), 0)
+                        new Users(null, email, username, 0)
                 ));
-
-        ActiveSession session = sessionRepository.findByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session with code " + sessionCode + " not found"));
-        //Had possible race here...
-        try {
-            if (!sessionPlayerRepository.existsByUserAndSession(user, session)) {
-                sessionPlayerRepository.save(new SessionPlayer(null, session, user, 0));
-            }
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // Ignore: another thread inserted the same user-session pair
-        }
-
-        return sessionPlayerRepository.findBySession(session).stream()
-                .map(sp -> new UserPayload(sp.getUser().getUsername(), sp.getUser().getEmail(), sessionCode))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public void removeUserFromSessionByUsername(String username, String sessionCode) {
-        Users user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("User " + username + " not found"));
-        ActiveSession session = sessionRepository.findByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session with code " + sessionCode + " not found"));
-        sessionPlayerRepository.deleteByUserAndSession(user, session);
-    }
-
-    @Transactional(readOnly = true)
-    public List<UserPayload> getAllUsersInSession(String sessionCode) {
-        ActiveSession session = sessionRepository.findByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session with code " + sessionCode + " not found"));
-        return sessionPlayerRepository.findBySession(session).stream()
-                .map(sp -> new UserPayload(sp.getUser().getUsername(), sp.getUser().getEmail(), sessionCode))
-                .collect(Collectors.toList());
     }
 }

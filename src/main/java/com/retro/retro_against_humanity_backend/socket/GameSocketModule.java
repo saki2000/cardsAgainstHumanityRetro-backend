@@ -3,25 +3,35 @@ package com.retro.retro_against_humanity_backend.socket;
 import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
-import com.retro.retro_against_humanity_backend.dto.UserPayload;
-import com.retro.retro_against_humanity_backend.service.UserService;
+import com.retro.retro_against_humanity_backend.dto.GameStateDto;
+import com.retro.retro_against_humanity_backend.dto.JoinSessionPayload;
+import com.retro.retro_against_humanity_backend.dto.LeaveSessionPayload;
+import com.retro.retro_against_humanity_backend.service.GameSessionService;
 import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 
 @Component
 @RequiredArgsConstructor
 public class GameSocketModule {
     private final SocketIOServer server;
-    private final UserService userService;
+    private final GameSessionService gameSessionService;
+
+    private final Map<String, ClientData> clientDataMap = new ConcurrentHashMap<>();
+    private record ClientData(String username, String sessionCode) {}
+
 
     @PostConstruct
     public void init() {
         server.addConnectListener(this::onConnect);
         server.addDisconnectListener(this::onDisconnect);
-        server.addEventListener("join_session", UserPayload.class, this::onJoinSession);
+        server.addEventListener("join_session", JoinSessionPayload.class, this::onJoinSession);
+        server.addEventListener("leave_session", LeaveSessionPayload.class, this::onLeaveSession);
     }
 
     private void onConnect(SocketIOClient client) {
@@ -29,48 +39,37 @@ public class GameSocketModule {
     }
 
     private void onDisconnect(SocketIOClient client) {
-        String sessionCode = client.get("sessionCode");
-        String username = client.get("username");
-        if (sessionCode != null && username != null) {
-            userService.removeUserFromSessionByUsername(username, sessionCode);
-            List<UserPayload> allUsers = userService.getAllUsersInSession(sessionCode);
-            server.getRoomOperations(sessionCode).sendEvent("update_user_list", allUsers);
-        }
         System.out.println("Client disconnected: " + client.getSessionId());
-        server.getRoomOperations(sessionCode).sendEvent("player_left", username);
+        ClientData data = clientDataMap.remove(client.getSessionId().toString());
+        if (data != null) {
+            gameSessionService.leaveSession(data.sessionCode(), data.username());
+            broadcastGameState(data.sessionCode());
+            server.getRoomOperations(data.sessionCode).sendEvent("player_left", data.username);
+        }
     }
 
-    private void onJoinSession(SocketIOClient client, UserPayload payload, AckRequest ackRequest) {
-        String sessionCode = payload.getSessionCode();
-        if (sessionCode == null || sessionCode.trim().isEmpty()) {
-            client.sendEvent("error", "Session code is required.");
-            return;
-        }
+    private void onJoinSession(SocketIOClient client, JoinSessionPayload payload, AckRequest ackRequest) {
+        clientDataMap.put(client.getSessionId().toString(), new ClientData(payload.getUsername(), payload.getSessionCode()));
 
-        List<UserPayload> allUsers = userService.getAllUsersInSession(sessionCode);
-        boolean userExists = allUsers.stream()
-                .anyMatch(u -> u.getUsername().equalsIgnoreCase(payload.getUsername()));
-        if (userExists) {
-            client.sendEvent("error", "User already joined this session.");
-            return;
-        }
-
-        client.set("sessionCode", sessionCode);
-        client.set("username", payload.getUsername());
-        client.joinRoom(sessionCode);
-        List<UserPayload> updatedList = userService.addUserToSessionAndGetAll(payload, sessionCode);
-        server.getRoomOperations(sessionCode).sendEvent("update_user_list", updatedList);
-        server.getRoomOperations(sessionCode).sendEvent("player_joined", payload.getUsername());
+        client.joinRoom(payload.getSessionCode());
+        gameSessionService.joinSession(payload.getSessionCode(), payload.getUsername(), payload.getEmail());
+        broadcastGameState(payload.getSessionCode());
+        server.getRoomOperations(payload.getSessionCode()).sendEvent("player_joined", payload.getUsername());
     }
 
-    private void onLeaveSession(SocketIOClient client, UserPayload payload,  AckRequest ackRequest) {
-        String sessionCode = payload.getSessionCode();
-        if (sessionCode != null && !sessionCode.trim().isEmpty()) {
-            userService.removeUserFromSessionByUsername(payload.getUsername(), sessionCode);
-            client.leaveRoom(sessionCode);
-            List<UserPayload> allUsers = userService.getAllUsersInSession(sessionCode);
-            server.getRoomOperations(sessionCode).sendEvent("update_user_list", allUsers);
-            server.getRoomOperations(sessionCode).sendEvent("player_left", payload.getUsername());
+    private void onLeaveSession(SocketIOClient client, LeaveSessionPayload payload, AckRequest ackRequest) {
+        client.leaveRoom(payload.getSessionCode());
+        gameSessionService.leaveSession(payload.getSessionCode(), payload.getUsername());
+        broadcastGameState(payload.getSessionCode());
+        server.getRoomOperations(payload.getSessionCode()).sendEvent("player_left", payload.getUsername());
+    }
+
+    private void broadcastGameState(String sessionCode) {
+        try {
+            GameStateDto gameState = gameSessionService.getGameState(sessionCode);
+            server.getRoomOperations(sessionCode).sendEvent("game_state_update", gameState);
+        } catch (EntityNotFoundException e) {
+            System.err.println("Attempted to broadcast state for a non-existent or empty session: " + sessionCode);
         }
     }
 }

@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "session_players", uniqueConstraints = @UniqueConstraint(columnNames = {"session_id", "user_id"}))
 @Data
@@ -25,4 +27,12 @@ public class SessionPlayer {
 
     @Column(nullable = false)
     private int score = 0;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }
