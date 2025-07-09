@@ -1,0 +1,4 @@
+ALTER TABLE active_session ADD COLUMN host_user_id INTEGER REFERENCES users(id) NULL;
+ALTER TABLE session_players ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE active_session DROP COLUMN email;
+ALTER TABLE active_session DROP COLUMN username;
