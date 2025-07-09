@@ -28,6 +28,9 @@ public class SessionPlayer {
     @Column(nullable = false)
     private int score = 0;
 
+    @Column(name = "turn_order", nullable = false)
+    private Integer turnOrder;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
