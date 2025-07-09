@@ -20,11 +20,8 @@ public class ActiveSession {
     @Column(nullable = false, unique = true)
     private String code;
 
-    @Column(nullable = false)
-    private String email;
-
-    @Column(nullable = false)
-    private String username;
+    @Column(name = "host_user_id")
+    private Long hostUserId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
