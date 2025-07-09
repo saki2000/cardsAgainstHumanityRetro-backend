@@ -34,13 +34,17 @@ public class GameSessionService {
         ActiveSession session = sessionRepository.findByCode(sessionCode)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
 
-        sessionPlayerRepository.findByUserAndSession(user, session).orElseGet(() -> {
-            SessionPlayer newPlayer = new SessionPlayer();
-            newPlayer.setSession(session);
-            newPlayer.setUser(user);
-            newPlayer.setScore(0);
-            return sessionPlayerRepository.save(newPlayer);
-        });
+        try { // TO prevent duplicate player entries / race conditions ?
+            sessionPlayerRepository.findByUserAndSession(user, session).orElseGet(() -> {
+                SessionPlayer newPlayer = new SessionPlayer();
+                newPlayer.setSession(session);
+                newPlayer.setUser(user);
+                newPlayer.setScore(0);
+                return sessionPlayerRepository.save(newPlayer);
+            });
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Player already exists, safe to ignore or fetch existing
+        }
 
         if (session.getHostUserId() == null) {
             session.setHostUserId(user.getId());
