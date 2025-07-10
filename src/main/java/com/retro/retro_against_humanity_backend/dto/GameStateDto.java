@@ -14,6 +14,6 @@ import java.util.List;
 public class GameStateDto {
     private String sessionCode;
     private Long hostId;
-    private Long currentPlayerId;
+    private Long cardHolderId;
     private List<PlayerDto> players;
 }

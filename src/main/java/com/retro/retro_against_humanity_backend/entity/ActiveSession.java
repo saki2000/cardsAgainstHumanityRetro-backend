@@ -23,8 +23,8 @@ public class ActiveSession {
     @Column(name = "host_user_id")
     private Long hostUserId;
 
-    @Column(name = "current_player_id")
-    private Long currentPlayerId;
+    @Column(name = "card_holder_id")
+    private Long cardHolderId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

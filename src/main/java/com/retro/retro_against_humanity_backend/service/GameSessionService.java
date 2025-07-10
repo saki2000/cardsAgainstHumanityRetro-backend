@@ -33,7 +33,6 @@ public class GameSessionService {
         ActiveSession session = sessionRepository.findByCode(sessionCode)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
 
-        // Check if player is already in the session
         if (sessionPlayerRepository.findByUserAndSession(user, session).isEmpty()) {
             // Find the highest current turn_order in the session to assign the next one
             Integer maxTurnOrder = sessionPlayerRepository.findMaxTurnOrderBySession(session)
@@ -43,7 +42,7 @@ public class GameSessionService {
             newPlayer.setSession(session);
             newPlayer.setUser(user);
             newPlayer.setScore(0);
-            newPlayer.setTurnOrder(maxTurnOrder + 1); // Assign the next turn order
+            newPlayer.setTurnOrder(maxTurnOrder + 1);
             sessionPlayerRepository.save(newPlayer);
         }
 
@@ -52,8 +51,8 @@ public class GameSessionService {
             sessionRepository.save(session);
         }
 
-        if (session.getCurrentPlayerId() == null) {
-            session.setCurrentPlayerId(user.getId());
+        if (session.getCardHolderId() == null) {
+            session.setCardHolderId(user.getId());
             sessionRepository.save(session);
         }
     }
@@ -63,7 +62,6 @@ public class GameSessionService {
         Users user = getUserByUsername(username);
         ActiveSession session = getSessionByCode(sessionCode);
 
-        // Important: Get player info *before* deleting them
         Optional<SessionPlayer> leavingPlayerOpt = sessionPlayerRepository.findByUserAndSession(user, session);
 
         if (leavingPlayerOpt.isPresent()) {
@@ -90,7 +88,7 @@ public class GameSessionService {
     }
 
     private void handleCurrentPlayerReassignment(Users user, ActiveSession session, SessionPlayer leavingPlayer) {
-        if (user.getId().equals(session.getCurrentPlayerId())) {
+        if (user.getId().equals(session.getCardHolderId())) {
             int currentTurnOrder = leavingPlayer.getTurnOrder();
 
             // Find the next player in the sequence
@@ -99,13 +97,13 @@ public class GameSessionService {
 
             if (nextPlayerOpt.isPresent()) {
                 // The next player is found
-                session.setCurrentPlayerId(nextPlayerOpt.get().getUser().getId());
+                session.setCardHolderId(nextPlayerOpt.get().getUser().getId());
             } else {
                 // Wrap around: find the player with the lowest turn order
                 sessionPlayerRepository.findFirstBySessionOrderByTurnOrderAsc(session)
                         .ifPresentOrElse(
-                                firstPlayer -> session.setCurrentPlayerId(firstPlayer.getUser().getId()),
-                                () -> session.setCurrentPlayerId(null) // No players left
+                                firstPlayer -> session.setCardHolderId(firstPlayer.getUser().getId()),
+                                () -> session.setCardHolderId(null) // No players left
                         );
             }
             sessionRepository.save(session);
@@ -138,6 +136,6 @@ public class GameSessionService {
                 .map(sp -> new PlayerDto(sp.getUser().getId(), sp.getUser().getUsername()))
                 .collect(Collectors.toList());
 
-        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCurrentPlayerId(), players);
+        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players);
     }
 }
