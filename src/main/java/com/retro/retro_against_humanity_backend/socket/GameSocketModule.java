@@ -4,6 +4,10 @@ import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.retro.retro_against_humanity_backend.dto.*;
+import com.retro.retro_against_humanity_backend.payloads.EndRoundPayload;
+import com.retro.retro_against_humanity_backend.payloads.EndSessionPayload;
+import com.retro.retro_against_humanity_backend.payloads.JoinSessionPayload;
+import com.retro.retro_against_humanity_backend.payloads.SessionStartedPayload;
 import com.retro.retro_against_humanity_backend.service.GameSessionService;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
@@ -32,6 +36,7 @@ public class GameSocketModule {
 //        server.addEventListener("leave_session", LeaveSessionPayload.class, this::onLeaveSession);
         server.addEventListener("end_of_round", EndRoundPayload.class, this::onEndRound);
         server.addEventListener("end_session", EndSessionPayload.class, this::onEndSession);
+        server.addEventListener("start_session", SessionStartedPayload.class, this::onSessionStarted);
     }
 
     private void onConnect(SocketIOClient client) {
@@ -93,6 +98,13 @@ public class GameSocketModule {
         System.out.println("Ending session: " + data.sessionCode());
         gameSessionService.endSession(data.sessionCode());
         server.getRoomOperations(data.sessionCode()).sendEvent("session_ended");
+    }
+
+    private void onSessionStarted(SocketIOClient client, SessionStartedPayload payload, AckRequest ackRequest) {
+        ClientData data = clientDataMap.get(client.getSessionId().toString());
+        System.out.println("Session started for: " + data.sessionCode());
+        gameSessionService.startSession(data.sessionCode());
+        server.getRoomOperations(data.sessionCode()).sendEvent("session_started");
     }
 
     private void broadcastGameState(String sessionCode) {

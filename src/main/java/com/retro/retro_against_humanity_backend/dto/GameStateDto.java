@@ -16,4 +16,5 @@ public class GameStateDto {
     private Long hostId;
     private Long cardHolderId;
     private List<PlayerDto> players;
+    private boolean gameStarted;
 }

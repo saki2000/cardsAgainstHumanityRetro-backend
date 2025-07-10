@@ -1,4 +1,4 @@
-package com.retro.retro_against_humanity_backend.dto;
+package com.retro.retro_against_humanity_backend.payloads;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

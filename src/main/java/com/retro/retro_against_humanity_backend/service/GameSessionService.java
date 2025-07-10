@@ -169,7 +169,10 @@ public class GameSessionService {
                 .map(sp -> new PlayerDto(sp.getUser().getId(), sp.getUser().getUsername()))
                 .collect(Collectors.toList());
 
-        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players);
+        boolean gameStarted = sessionRepository.findSessionStartedByCode(sessionCode)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
+
+        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players, gameStarted);
     }
 
     @Transactional
@@ -179,5 +182,13 @@ public class GameSessionService {
 //        sessionRepository.delete(session);
         //TODO: Probably not needed, as sessions are deleted when the last player leaves
         //TODO: implement logic to save points, etc. before deleting the session
+    }
+
+    @Transactional
+    public void startSession(String sessionCode) {
+        ActiveSession session = sessionRepository.findByCode(sessionCode)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
+        session.setSessionStarted(true);
+        sessionRepository.save(session);
     }
 }
