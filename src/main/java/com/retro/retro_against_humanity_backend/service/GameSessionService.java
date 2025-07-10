@@ -68,7 +68,7 @@ public class GameSessionService {
             removePlayerFromSession(user, session);
             broadcastLeave.run();
 
-            handleCurrentPlayerReassignment(user, session, leavingPlayerOpt.get());
+            handleCardHolderReassignment(user, session, leavingPlayerOpt.get());
             handleHostReassignmentOrSessionDeletion(user, session, broadcastHostChange);
         }
     }
@@ -87,7 +87,7 @@ public class GameSessionService {
         sessionPlayerRepository.deleteByUserAndSession(user, session);
     }
 
-    private void handleCurrentPlayerReassignment(Users user, ActiveSession session, SessionPlayer leavingPlayer) {
+    private void handleCardHolderReassignment(Users user, ActiveSession session, SessionPlayer leavingPlayer) {
         if (user.getId().equals(session.getCardHolderId())) {
             int currentTurnOrder = leavingPlayer.getTurnOrder();
 
