@@ -171,4 +171,13 @@ public class GameSessionService {
 
         return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players);
     }
+
+    @Transactional
+    public void endSession(String sessionCode) {
+//        ActiveSession session = sessionRepository.findByCode(sessionCode)
+//                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
+//        sessionRepository.delete(session);
+        //TODO: Probably not needed, as sessions are deleted when the last player leaves
+        //TODO: implement logic to save points, etc. before deleting the session
+    }
 }
