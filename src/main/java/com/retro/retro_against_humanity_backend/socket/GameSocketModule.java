@@ -48,7 +48,8 @@ public class GameSocketModule {
                         broadcastGameState(data.sessionCode());
                         server.getRoomOperations(data.sessionCode()).sendEvent("player_left", data.username());
                     },
-                    () -> server.getRoomOperations(data.sessionCode()).sendEvent("host_change", data.username())
+                    () -> server.getRoomOperations(data.sessionCode()).sendEvent("host_change", data.username()),
+                    () -> server.getRoomOperations(data.sessionCode()).sendEvent("session_end", (Object) null) //TODO: might be different payload later
             );
         }
     }

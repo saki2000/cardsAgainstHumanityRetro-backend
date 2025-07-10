@@ -58,7 +58,7 @@ public class GameSessionService {
     }
 
     @Transactional
-    public void leaveSession(String sessionCode, String username, Runnable broadcastLeave, Runnable broadcastHostChange) {
+    public void leaveSession(String sessionCode, String username, Runnable broadcastLeave, Runnable broadcastHostChange, Runnable broadcastCardHolderChange) {
         Users user = getUserByUsername(username);
         ActiveSession session = getSessionByCode(sessionCode);
 
@@ -68,8 +68,8 @@ public class GameSessionService {
             removePlayerFromSession(user, session);
             broadcastLeave.run();
 
-            handleCardHolderReassignment(user, session, leavingPlayerOpt.get());
             handleHostReassignmentOrSessionDeletion(user, session, broadcastHostChange);
+            handleCardHolderReassignment(user, session, leavingPlayerOpt.get(), broadcastCardHolderChange);
         }
     }
 
@@ -87,7 +87,7 @@ public class GameSessionService {
         sessionPlayerRepository.deleteByUserAndSession(user, session);
     }
 
-    private void handleCardHolderReassignment(Users user, ActiveSession session, SessionPlayer leavingPlayer) {
+    private void handleCardHolderReassignment(Users user, ActiveSession session, SessionPlayer leavingPlayer, Runnable broadcastSessionEnd) {
         if (user.getId().equals(session.getCardHolderId())) {
             int currentTurnOrder = leavingPlayer.getTurnOrder();
 
@@ -96,18 +96,38 @@ public class GameSessionService {
                     .findFirstBySessionAndTurnOrderGreaterThanOrderByTurnOrderAsc(session, currentTurnOrder);
 
             if (nextPlayerOpt.isPresent()) {
-                // The next player is found
                 session.setCardHolderId(nextPlayerOpt.get().getUser().getId());
+                sessionRepository.save(session);
             } else {
-                // Wrap around: find the player with the lowest turn order
-                sessionPlayerRepository.findFirstBySessionOrderByTurnOrderAsc(session)
-                        .ifPresentOrElse(
-                                firstPlayer -> session.setCardHolderId(firstPlayer.getUser().getId()),
-                                () -> session.setCardHolderId(null) // No players left
-                        );
+                // No more players to assign
+                session.setCardHolderId(null);
+                sessionRepository.save(session);
+                broadcastSessionEnd.run();
             }
-            sessionRepository.save(session);
         }
+           //
+          // THIS Version wraps around to the next player so that the game continues
+         //
+//        if (user.getId().equals(session.getCardHolderId())) {
+//            int currentTurnOrder = leavingPlayer.getTurnOrder();
+//
+//            // Find the next player in the sequence
+//            Optional<SessionPlayer> nextPlayerOpt = sessionPlayerRepository
+//                    .findFirstBySessionAndTurnOrderGreaterThanOrderByTurnOrderAsc(session, currentTurnOrder);
+//
+//            if (nextPlayerOpt.isPresent()) {
+//                // The next player is found
+//                session.setCardHolderId(nextPlayerOpt.get().getUser().getId());
+//            } else {
+//                // Wrap around: find the player with the lowest turn order
+//                sessionPlayerRepository.findFirstBySessionOrderByTurnOrderAsc(session)
+//                        .ifPresentOrElse(
+//                                firstPlayer -> session.setCardHolderId(firstPlayer.getUser().getId()),
+//                                () -> session.setCardHolderId(null) // No players left
+//                        );
+//            }
+//            sessionRepository.save(session);
+//        }
     }
 
     private void handleHostReassignmentOrSessionDeletion(Users user, ActiveSession session, Runnable broadcastHostChange) {
