@@ -16,12 +16,9 @@ public interface SessionPlayerRepository extends JpaRepository<SessionPlayer, Lo
     boolean existsByUserAndSession(Users user, ActiveSession session);
     List<SessionPlayer> findBySession(ActiveSession session);
     void deleteByUserAndSession(Users user, ActiveSession session);
-
     Optional<SessionPlayer> findByUserAndSession(Users user, ActiveSession session);
-    Optional<SessionPlayer> findFirstBySessionOrderByCreatedAtAsc(ActiveSession session);
+    List<SessionPlayer> findBySessionOrderByCreatedAtAsc(ActiveSession session);
 
     @Query("SELECT MAX(sp.turnOrder) FROM SessionPlayer sp WHERE sp.session = :session")
     Optional<Integer> findMaxTurnOrderBySession(@Param("session") ActiveSession session);
-    Optional<SessionPlayer> findFirstBySessionAndTurnOrderGreaterThanOrderByTurnOrderAsc(ActiveSession session, Integer turnOrder);
-    Optional<SessionPlayer> findFirstBySessionOrderByTurnOrderAsc(ActiveSession session);
 }

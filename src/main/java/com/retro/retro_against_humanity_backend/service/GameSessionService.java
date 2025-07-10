@@ -1,6 +1,7 @@
 package com.retro.retro_against_humanity_backend.service;
 
 import com.retro.retro_against_humanity_backend.dto.GameStateDto;
+import com.retro.retro_against_humanity_backend.dto.LeaveSessionResult;
 import com.retro.retro_against_humanity_backend.dto.PlayerDto;
 import com.retro.retro_against_humanity_backend.entity.ActiveSession;
 import com.retro.retro_against_humanity_backend.entity.SessionPlayer;
@@ -14,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,19 +58,62 @@ public class GameSessionService {
     }
 
     @Transactional
-    public void leaveSession(String sessionCode, String username, Runnable broadcastLeave, Runnable broadcastHostChange, Runnable broadcastCardHolderChange) {
-        Users user = getUserByUsername(username);
+    public LeaveSessionResult leaveSession(String sessionCode, String username) {
+        Users leavingUser = getUserByUsername(username);
         ActiveSession session = getSessionByCode(sessionCode);
+        Long leavingUserId = leavingUser.getId();
 
-        Optional<SessionPlayer> leavingPlayerOpt = sessionPlayerRepository.findByUserAndSession(user, session);
+        Long oldHostId = session.getHostUserId();
+        Long oldCardHolderId = session.getCardHolderId();
 
-        if (leavingPlayerOpt.isPresent()) {
-            removePlayerFromSession(user, session);
-            broadcastLeave.run();
+        List<SessionPlayer> playersBeforeRemoval = sessionPlayerRepository.findBySessionOrderByCreatedAtAsc(session);
 
-            handleHostReassignmentOrSessionDeletion(user, session, broadcastHostChange);
-            handleCardHolderReassignment(user, session, leavingPlayerOpt.get(), broadcastCardHolderChange);
+        sessionPlayerRepository.deleteByUserAndSession(leavingUser, session);
+
+        if (playersBeforeRemoval.size() == 1) {
+            sessionRepository.delete(session);
+            return LeaveSessionResult.sessionDeleted();
         }
+
+        List<SessionPlayer> remainingPlayers = playersBeforeRemoval.stream()
+                .filter(p -> !p.getUser().getId().equals(leavingUserId))
+                .toList();
+
+        if (leavingUserId.equals(oldHostId)) {
+            SessionPlayer newHost = remainingPlayers.get(0);
+            session.setHostUserId(newHost.getUser().getId());
+        }
+
+        if (leavingUserId.equals(oldCardHolderId)) {
+            int leavingPlayerIndex = -1;
+            for (int i = 0; i < playersBeforeRemoval.size(); i++) {
+                if (playersBeforeRemoval.get(i).getUser().getId().equals(leavingUserId)) {
+                    leavingPlayerIndex = i;
+                    break;
+                }
+            }
+
+            int newCardHolderIndex = (leavingPlayerIndex + 1) % playersBeforeRemoval.size();
+
+            SessionPlayer nextPlayerInOriginalOrder = playersBeforeRemoval.get(newCardHolderIndex);
+
+            if(nextPlayerInOriginalOrder.getUser().getId().equals(leavingUserId)) {
+                newCardHolderIndex = (newCardHolderIndex + 1) % playersBeforeRemoval.size();
+                nextPlayerInOriginalOrder = playersBeforeRemoval.get(newCardHolderIndex);
+            }
+
+            session.setCardHolderId(nextPlayerInOriginalOrder.getUser().getId());
+        }
+
+        sessionRepository.save(session);
+
+        return new LeaveSessionResult(
+                false,
+                oldHostId,
+                session.getHostUserId(),
+                oldCardHolderId,
+                session.getCardHolderId()
+        );
     }
 
     private Users getUserByUsername(String username) {
@@ -81,70 +124,6 @@ public class GameSessionService {
     private ActiveSession getSessionByCode(String sessionCode) {
         return sessionRepository.findByCode(sessionCode)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
-    }
-
-    private void removePlayerFromSession(Users user, ActiveSession session) {
-        sessionPlayerRepository.deleteByUserAndSession(user, session);
-    }
-
-    private void handleCardHolderReassignment(Users user, ActiveSession session, SessionPlayer leavingPlayer, Runnable broadcastSessionEnd) {
-        if (user.getId().equals(session.getCardHolderId())) {
-            int currentTurnOrder = leavingPlayer.getTurnOrder();
-
-            // Find the next player in the sequence
-            Optional<SessionPlayer> nextPlayerOpt = sessionPlayerRepository
-                    .findFirstBySessionAndTurnOrderGreaterThanOrderByTurnOrderAsc(session, currentTurnOrder);
-
-            if (nextPlayerOpt.isPresent()) {
-                session.setCardHolderId(nextPlayerOpt.get().getUser().getId());
-                sessionRepository.save(session);
-            } else {
-                // No more players to assign
-                session.setCardHolderId(null);
-                sessionRepository.save(session);
-                broadcastSessionEnd.run();
-            }
-        }
-           //
-          // THIS Version wraps around to the next player so that the game continues
-         //
-//        if (user.getId().equals(session.getCardHolderId())) {
-//            int currentTurnOrder = leavingPlayer.getTurnOrder();
-//
-//            // Find the next player in the sequence
-//            Optional<SessionPlayer> nextPlayerOpt = sessionPlayerRepository
-//                    .findFirstBySessionAndTurnOrderGreaterThanOrderByTurnOrderAsc(session, currentTurnOrder);
-//
-//            if (nextPlayerOpt.isPresent()) {
-//                // The next player is found
-//                session.setCardHolderId(nextPlayerOpt.get().getUser().getId());
-//            } else {
-//                // Wrap around: find the player with the lowest turn order
-//                sessionPlayerRepository.findFirstBySessionOrderByTurnOrderAsc(session)
-//                        .ifPresentOrElse(
-//                                firstPlayer -> session.setCardHolderId(firstPlayer.getUser().getId()),
-//                                () -> session.setCardHolderId(null) // No players left
-//                        );
-//            }
-//            sessionRepository.save(session);
-//        }
-    }
-
-    private void handleHostReassignmentOrSessionDeletion(Users user, ActiveSession session, Runnable broadcastHostChange) {
-        if (user.getId().equals(session.getHostUserId())) {
-            // Assign host to the player with the lowest turn order
-            Optional<SessionPlayer> nextHostPlayer = sessionPlayerRepository
-                    .findFirstBySessionOrderByTurnOrderAsc(session);
-
-            if (nextHostPlayer.isPresent()) {
-                session.setHostUserId(nextHostPlayer.get().getUser().getId());
-                sessionRepository.save(session);
-                broadcastHostChange.run();
-            } else {
-                // No players left, delete the session
-                sessionRepository.delete(session);
-            }
-        }
     }
 
     @Transactional

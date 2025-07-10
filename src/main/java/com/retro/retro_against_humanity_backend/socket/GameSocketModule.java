@@ -5,6 +5,7 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.retro.retro_against_humanity_backend.dto.GameStateDto;
 import com.retro.retro_against_humanity_backend.dto.JoinSessionPayload;
+import com.retro.retro_against_humanity_backend.dto.LeaveSessionResult;
 import com.retro.retro_against_humanity_backend.service.GameSessionService;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
@@ -40,17 +41,23 @@ public class GameSocketModule {
     private void onDisconnect(SocketIOClient client) {
         System.out.println("Client disconnected: " + client.getSessionId());
         ClientData data = clientDataMap.remove(client.getSessionId().toString());
+
         if (data != null) {
-            gameSessionService.leaveSession(
-                    data.sessionCode(),
-                    data.username(),
-                    () -> {
-                        broadcastGameState(data.sessionCode());
-                        server.getRoomOperations(data.sessionCode()).sendEvent("player_left", data.username());
-                    },
-                    () -> server.getRoomOperations(data.sessionCode()).sendEvent("host_change", data.username()),
-                    () -> server.getRoomOperations(data.sessionCode()).sendEvent("session_end", (Object) null) //TODO: might be different payload later
-            );
+            LeaveSessionResult result = gameSessionService.leaveSession(data.sessionCode(), data.username());
+
+            if (result.wasSessionDeleted()) {
+                System.out.println("Session " + data.sessionCode() + " ended because the last player left.");
+            } else {
+                if (!result.oldHostId().equals(result.newHostId())) {
+                    System.out.println("Host changed in session " + data.sessionCode());
+                    server.getRoomOperations(data.sessionCode()).sendEvent("host_change", result.newHostId());
+                }
+                if (!result.oldCardHolderId().equals(result.newCardHolderId())) {
+                    System.out.println("Card holder changed in session " + data.sessionCode());
+                    server.getRoomOperations(data.sessionCode()).sendEvent("cardholder_change", result.newCardHolderId());
+                }
+                broadcastGameState(data.sessionCode());
+            }
         }
     }
 
