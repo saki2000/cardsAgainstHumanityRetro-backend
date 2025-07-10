@@ -3,6 +3,7 @@ package com.retro.retro_against_humanity_backend.socket;
 import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
+import com.retro.retro_against_humanity_backend.dto.EndRoundPayload;
 import com.retro.retro_against_humanity_backend.dto.GameStateDto;
 import com.retro.retro_against_humanity_backend.dto.JoinSessionPayload;
 import com.retro.retro_against_humanity_backend.dto.LeaveSessionResult;
@@ -32,6 +33,7 @@ public class GameSocketModule {
         server.addDisconnectListener(this::onDisconnect);
         server.addEventListener("join_session", JoinSessionPayload.class, this::onJoinSession);
 //        server.addEventListener("leave_session", LeaveSessionPayload.class, this::onLeaveSession);
+        server.addEventListener("end_of_round", EndRoundPayload.class, this::onEndRound);
     }
 
     private void onConnect(SocketIOClient client) {
@@ -76,6 +78,17 @@ public class GameSocketModule {
 //        broadcastGameState(payload.getSessionCode());
 //        server.getRoomOperations(payload.getSessionCode()).sendEvent("player_left", payload.getUsername());
 //    }
+
+    private void onEndRound(SocketIOClient client, EndRoundPayload endRoundPayload, AckRequest ackRequest) {
+        ClientData data = clientDataMap.get(client.getSessionId().toString());
+        System.out.println("End of round for session: " + data.sessionCode());
+        boolean sessionEnded = gameSessionService.endRound(data.sessionCode());
+        if (sessionEnded) {
+            server.getRoomOperations(data.sessionCode()).sendEvent("session_ended");
+        } else {
+            broadcastGameState(data.sessionCode());
+        }
+    }
 
     private void broadcastGameState(String sessionCode) {
         try {

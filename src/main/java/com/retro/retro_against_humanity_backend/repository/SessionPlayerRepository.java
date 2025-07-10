@@ -21,4 +21,5 @@ public interface SessionPlayerRepository extends JpaRepository<SessionPlayer, Lo
 
     @Query("SELECT MAX(sp.turnOrder) FROM SessionPlayer sp WHERE sp.session = :session")
     Optional<Integer> findMaxTurnOrderBySession(@Param("session") ActiveSession session);
+    List<SessionPlayer> findBySessionOrderByTurnOrderAsc(ActiveSession session);
 }

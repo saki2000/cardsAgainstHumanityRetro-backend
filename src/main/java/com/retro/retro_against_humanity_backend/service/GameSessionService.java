@@ -29,12 +29,10 @@ public class GameSessionService {
     public void joinSession(String sessionCode, String username, String email) {
         Users user = userRepository.findByUsername(username)
                 .orElseGet(() -> userRepository.save(new Users(null, email, username, 0)));
+        ActiveSession session = getSessionByCode(sessionCode);
 
-        ActiveSession session = sessionRepository.findByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
+        sessionPlayerRepository.findByUserAndSession(user, session).orElseGet(() -> {
 
-        if (sessionPlayerRepository.findByUserAndSession(user, session).isEmpty()) {
-            // Find the highest current turn_order in the session to assign the next one
             Integer maxTurnOrder = sessionPlayerRepository.findMaxTurnOrderBySession(session)
                     .orElse(0);
 
@@ -43,16 +41,20 @@ public class GameSessionService {
             newPlayer.setUser(user);
             newPlayer.setScore(0);
             newPlayer.setTurnOrder(maxTurnOrder + 1);
-            sessionPlayerRepository.save(newPlayer);
-        }
+            return sessionPlayerRepository.save(newPlayer);
+        });
 
+        boolean sessionUpdated = false;
         if (session.getHostUserId() == null) {
             session.setHostUserId(user.getId());
-            sessionRepository.save(session);
+            sessionUpdated = true;
         }
 
         if (session.getCardHolderId() == null) {
             session.setCardHolderId(user.getId());
+            sessionUpdated = true;
+        }
+        if(sessionUpdated) {
             sessionRepository.save(session);
         }
     }
@@ -114,6 +116,38 @@ public class GameSessionService {
                 oldCardHolderId,
                 session.getCardHolderId()
         );
+    }
+
+    @Transactional
+    public boolean endRound(String sessionCode) {
+        ActiveSession session = getSessionByCode(sessionCode);
+
+        List<SessionPlayer> players = sessionPlayerRepository.findBySessionOrderByTurnOrderAsc(session);
+        if (players.isEmpty()) {
+            sessionRepository.delete(session);
+            return true;
+        }
+
+        Long currentCardHolderId = session.getCardHolderId();
+        int currentIndex = -1;
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i).getUser().getId().equals(currentCardHolderId)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        int nextIndex = (currentIndex + 1) % players.size();
+        SessionPlayer nextCardHolder = players.get(nextIndex);
+
+        if (players.size() == 1) {
+            sessionRepository.delete(session);
+            return true;
+        }
+
+        session.setCardHolderId(nextCardHolder.getUser().getId());
+        sessionRepository.save(session);
+        return false;
     }
 
     private Users getUserByUsername(String username) {
