@@ -87,13 +87,7 @@ public class GameSessionService {
         }
 
         if (leavingUserId.equals(oldCardHolderId)) {
-            int leavingPlayerIndex = -1;
-            for (int i = 0; i < playersBeforeRemoval.size(); i++) {
-                if (playersBeforeRemoval.get(i).getUser().getId().equals(leavingUserId)) {
-                    leavingPlayerIndex = i;
-                    break;
-                }
-            }
+            int leavingPlayerIndex = findPlayerIndexByUserId(playersBeforeRemoval, leavingUserId);
 
             int newCardHolderIndex = (leavingPlayerIndex + 1) % playersBeforeRemoval.size();
 
@@ -129,18 +123,12 @@ public class GameSessionService {
         }
 
         Long currentCardHolderId = session.getCardHolderId();
-        int currentIndex = -1;
-        for (int i = 0; i < players.size(); i++) {
-            if (players.get(i).getUser().getId().equals(currentCardHolderId)) {
-                currentIndex = i;
-                break;
-            }
-        }
+        int currentIndex = findPlayerIndexByUserId(players, currentCardHolderId);
 
         int nextIndex = (currentIndex + 1) % players.size();
         SessionPlayer nextCardHolder = players.get(nextIndex);
 
-        if (players.size() == 1) {
+        if (players.size() == 1) { //TODO: Unsure if needed, this case
             sessionRepository.delete(session);
             return true;
         }
@@ -148,6 +136,15 @@ public class GameSessionService {
         session.setCardHolderId(nextCardHolder.getUser().getId());
         sessionRepository.save(session);
         return false;
+    }
+
+    private int findPlayerIndexByUserId(List<SessionPlayer> players, Long userId) {
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i).getUser().getId().equals(userId)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private Users getUserByUsername(String username) {
