@@ -1,14 +1,15 @@
 package com.retro.retro_against_humanity_backend.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserPayload {
+@Builder
+public class PlayerDto {
+    private Long id;
     private String username;
-    private String email;
-    private String sessionCode;
 }

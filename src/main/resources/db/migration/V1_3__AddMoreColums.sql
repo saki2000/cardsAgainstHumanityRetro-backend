@@ -1,0 +1,1 @@
+ALTER TABLE active_session ADD COLUMN session_started BOOL NOT NULL DEFAULT FALSE;

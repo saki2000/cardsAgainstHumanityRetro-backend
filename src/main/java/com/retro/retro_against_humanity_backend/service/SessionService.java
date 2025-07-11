@@ -22,8 +22,6 @@ public class SessionService {
 
         ActiveSession session = new ActiveSession();
         session.setCode(sessionId);
-        session.setEmail(request.getEmail());
-        session.setUsername(request.getName());
 
         activeSessionRepository.save(session);
 

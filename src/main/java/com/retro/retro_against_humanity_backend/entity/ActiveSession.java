@@ -17,14 +17,17 @@ public class ActiveSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "code", nullable = false, unique = true)
     private String code;
 
-    @Column(nullable = false)
-    private String email;
+    @Column(name = "host_user_id")
+    private Long hostUserId;
 
-    @Column(nullable = false)
-    private String username;
+    @Column(name = "card_holder_id")
+    private Long cardHolderId;
+
+    @Column(name = "session_started", nullable = false)
+    private boolean sessionStarted = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
