@@ -1,8 +1,6 @@
 package com.retro.retro_against_humanity_backend.service;
 
-import com.retro.retro_against_humanity_backend.dto.GameStateDto;
-import com.retro.retro_against_humanity_backend.dto.LeaveSessionResult;
-import com.retro.retro_against_humanity_backend.dto.PlayerDto;
+import com.retro.retro_against_humanity_backend.dto.*;
 import com.retro.retro_against_humanity_backend.entity.ActiveSession;
 import com.retro.retro_against_humanity_backend.entity.SessionPlayer;
 import com.retro.retro_against_humanity_backend.entity.Users;
@@ -24,23 +22,24 @@ public class GameSessionService {
     private final ActiveSessionRepository sessionRepository;
     private final SessionPlayerRepository sessionPlayerRepository;
     private final UserRepository userRepository;
+    private final CardService cardService;
 
     @Transactional
-    public void joinSession(String sessionCode, String username, String email) {
+    public Users joinSession(String sessionCode, String username, String email) {
         Users user = userRepository.findByUsername(username)
                 .orElseGet(() -> userRepository.save(new Users(null, email, username, 0)));
+
         ActiveSession session = getSessionByCode(sessionCode);
 
         sessionPlayerRepository.findByUserAndSession(user, session).orElseGet(() -> {
-
             Integer maxTurnOrder = sessionPlayerRepository.findMaxTurnOrderBySession(session)
-                    .orElse(0);
+                    .orElse(0); // If no players, maxTurnOrder is 0.
 
             SessionPlayer newPlayer = new SessionPlayer();
             newPlayer.setSession(session);
             newPlayer.setUser(user);
             newPlayer.setScore(0);
-            newPlayer.setTurnOrder(maxTurnOrder + 1);
+            newPlayer.setTurnOrder(maxTurnOrder + 1); // New player gets the next turn order.
             return sessionPlayerRepository.save(newPlayer);
         });
 
@@ -49,15 +48,16 @@ public class GameSessionService {
             session.setHostUserId(user.getId());
             sessionUpdated = true;
         }
-
         if (session.getCardHolderId() == null) {
             session.setCardHolderId(user.getId());
             sessionUpdated = true;
         }
-        if(sessionUpdated) {
+        if (sessionUpdated) {
             sessionRepository.save(session);
         }
+        return user;
     }
+
 
     @Transactional
     public LeaveSessionResult leaveSession(String sessionCode, String username) {
@@ -113,29 +113,30 @@ public class GameSessionService {
     }
 
     @Transactional
-    public boolean endRound(String sessionCode) {
+    public EndRoundResult endRound(String sessionCode, int numberOfCards) {
+        cardService.clearPlayedCardSlots(sessionCode);
         ActiveSession session = getSessionByCode(sessionCode);
 
         List<SessionPlayer> players = sessionPlayerRepository.findBySessionOrderByTurnOrderAsc(session);
         if (players.isEmpty()) {
-            sessionRepository.delete(session);
-            return true;
+            return EndRoundResult.sessionEnded();
         }
 
-        Long currentCardHolderId = session.getCardHolderId();
-        int currentIndex = findPlayerIndexByUserId(players, currentCardHolderId);
-
+        int currentIndex = -1;
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i).getUser().getId().equals(session.getCardHolderId())) {
+                currentIndex = i;
+                break;
+            }
+        }
         int nextIndex = (currentIndex + 1) % players.size();
-        SessionPlayer nextCardHolder = players.get(nextIndex);
-
-        if (players.size() == 1) { //TODO: Unsure if needed, this case
-            sessionRepository.delete(session);
-            return true;
-        }
-
-        session.setCardHolderId(nextCardHolder.getUser().getId());
+        Long newCardHolderId = players.get(nextIndex).getUser().getId();
+        session.setCardHolderId(newCardHolderId);
         sessionRepository.save(session);
-        return false;
+
+        List<CardDto> cardsToDealDto = cardService.getCardsForNextRound(sessionCode, numberOfCards);
+
+        return new EndRoundResult(false, newCardHolderId, cardsToDealDto);
     }
 
     private int findPlayerIndexByUserId(List<SessionPlayer> players, Long userId) {

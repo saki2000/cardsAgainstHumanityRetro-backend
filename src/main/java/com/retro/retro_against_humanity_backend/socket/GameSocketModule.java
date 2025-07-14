@@ -4,16 +4,17 @@ import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.retro.retro_against_humanity_backend.dto.*;
-import com.retro.retro_against_humanity_backend.payloads.EndRoundPayload;
-import com.retro.retro_against_humanity_backend.payloads.EndSessionPayload;
-import com.retro.retro_against_humanity_backend.payloads.JoinSessionPayload;
-import com.retro.retro_against_humanity_backend.payloads.SessionStartedPayload;
+import com.retro.retro_against_humanity_backend.entity.Users;
+import com.retro.retro_against_humanity_backend.payloads.*;
+import com.retro.retro_against_humanity_backend.service.CardService;
 import com.retro.retro_against_humanity_backend.service.GameSessionService;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,11 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @RequiredArgsConstructor
 public class GameSocketModule {
+    private final int MAX_CARDS_PER_ROUND = 9;
     private final SocketIOServer server;
     private final GameSessionService gameSessionService;
+    private final CardService cardService;
 
     private final Map<String, ClientData> clientDataMap = new ConcurrentHashMap<>();
-    private record ClientData(String username, String sessionCode) {}
+    private final Map<Long, SocketIOClient> userClientMap = new ConcurrentHashMap<>();
+    private record ClientData(Long userId, String username, String sessionCode) {}
 
 
     @PostConstruct
@@ -33,10 +37,10 @@ public class GameSocketModule {
         server.addConnectListener(this::onConnect);
         server.addDisconnectListener(this::onDisconnect);
         server.addEventListener("join_session", JoinSessionPayload.class, this::onJoinSession);
-//        server.addEventListener("leave_session", LeaveSessionPayload.class, this::onLeaveSession);
         server.addEventListener("end_of_round", EndRoundPayload.class, this::onEndRound);
         server.addEventListener("end_session", EndSessionPayload.class, this::onEndSession);
         server.addEventListener("start_session", SessionStartedPayload.class, this::onSessionStarted);
+        server.addEventListener("play_card", PlayCardPayload.class, this::onPlayCard);
     }
 
     private void onConnect(SocketIOClient client) {
@@ -48,6 +52,7 @@ public class GameSocketModule {
         ClientData data = clientDataMap.remove(client.getSessionId().toString());
 
         if (data != null) {
+            userClientMap.remove(data.userId());
             LeaveSessionResult result = gameSessionService.leaveSession(data.sessionCode(), data.username());
 
             if (result.wasSessionDeleted()) {
@@ -67,29 +72,28 @@ public class GameSocketModule {
     }
 
     private void onJoinSession(SocketIOClient client, JoinSessionPayload payload, AckRequest ackRequest) {
-        clientDataMap.put(client.getSessionId().toString(), new ClientData(payload.getUsername(), payload.getSessionCode()));
+        Users user = gameSessionService.joinSession(payload.getSessionCode(), payload.getUsername(), payload.getEmail());
+        ClientData clientData = new ClientData(user.getId(), user.getUsername(), payload.getSessionCode());
+        clientDataMap.put(client.getSessionId().toString(), clientData);
+        userClientMap.put(user.getId(), client);
         client.joinRoom(payload.getSessionCode());
-        gameSessionService.joinSession(payload.getSessionCode(), payload.getUsername(), payload.getEmail());
         broadcastGameState(payload.getSessionCode());
-        server.getRoomOperations(payload.getSessionCode()).sendEvent("player_joined", payload.getUsername());
     }
 
-//    //TODO: Think this is just disconnect now, not leave - same same(?)
-//    private void onLeaveSession(SocketIOClient client, LeaveSessionPayload payload, AckRequest ackRequest) {
-//        client.leaveRoom(payload.getSessionCode());
-//        gameSessionService.leaveSession(payload.getSessionCode(), payload.getUsername());
-//        broadcastGameState(payload.getSessionCode());
-//        server.getRoomOperations(payload.getSessionCode()).sendEvent("player_left", payload.getUsername());
-//    }
+    private void onEndRound(SocketIOClient client, EndRoundPayload payload, AckRequest ackRequest) {
+        ClientData data = clientDataMap.get(client.getSessionId()); //
 
-    private void onEndRound(SocketIOClient client, EndRoundPayload endRoundPayload, AckRequest ackRequest) {
-        ClientData data = clientDataMap.get(client.getSessionId().toString());
-        System.out.println("End of round for session: " + data.sessionCode());
-        boolean sessionEnded = gameSessionService.endRound(data.sessionCode());
-        if (sessionEnded) {
-            server.getRoomOperations(data.sessionCode()).sendEvent("session_ended");
+        EndRoundResult endRoundResult = gameSessionService.endRound(payload.sessionCode(), MAX_CARDS_PER_ROUND);
+
+        if (endRoundResult.isSessionEnded()) {
+            server.getRoomOperations(payload.sessionCode()).sendEvent("session_ended");
         } else {
-            broadcastGameState(data.sessionCode());
+            // Deal cards privately to the new cardholder
+            broadcastCardsToPlayer(endRoundResult.getNewCardHolderId(), endRoundResult.getCardsToDeal());
+            // Broadcast the new public game state to everyone
+            broadcastGameState(payload.sessionCode());
+            // Clear the slots for the next round
+            broadcastClearSlots(payload.sessionCode());
         }
     }
 
@@ -104,15 +108,41 @@ public class GameSocketModule {
         ClientData data = clientDataMap.get(client.getSessionId().toString());
         System.out.println("Session started for: " + data.sessionCode());
         gameSessionService.startSession(data.sessionCode());
-        server.getRoomOperations(data.sessionCode()).sendEvent("session_started");
+        broadcastGameState(data.sessionCode());
+        List<CardDto> cardHolderCard = cardService.getCardsForNextRound (data.sessionCode(), MAX_CARDS_PER_ROUND);
+        broadcastCardsToPlayer(data.userId(), cardHolderCard);
     }
 
     private void broadcastGameState(String sessionCode) {
         try {
             GameStateDto gameState = gameSessionService.getGameState(sessionCode);
+            System.out.println("Game State: " + gameState); //TODO: Remove later
             server.getRoomOperations(sessionCode).sendEvent("game_state_update", gameState);
         } catch (EntityNotFoundException e) {
             System.err.println("Attempted to broadcast state for a non-existent or empty session: " + sessionCode);
         }
+    }
+
+    private void broadcastCardsToPlayer(Long userId, List<CardDto> cards) {
+        SocketIOClient client = userClientMap.get(userId);
+        if (client != null) {
+            System.out.println("Dealing " + cards.size() + " cards to user " + userId);
+            client.sendEvent("deal_cards", cards);
+        } else {
+            System.err.println("Could not find active client for user ID: " + userId + " to deal cards.");
+        }
+    }
+
+    private void broadcastClearSlots(String sessionCode) {
+        server.getRoomOperations(sessionCode).sendEvent("slots_updated", new HashMap<>());
+    }
+
+    private void onPlayCard(SocketIOClient client, PlayCardPayload payload, AckRequest ackRequest) {
+        ClientData data = clientDataMap.get(client.getSessionId().toString());
+        System.out.println("User " + data.username() + " played a card in session " + data.sessionCode());
+        cardService.playCard(data.sessionCode(), payload.cardId(), payload.slotId());
+
+        Map<String, CardDto> updatedSlots = cardService.getPlayedCardsForRound(data.sessionCode());
+        server.getRoomOperations(data.sessionCode()).sendEvent("slots_updated", updatedSlots);
     }
 }
