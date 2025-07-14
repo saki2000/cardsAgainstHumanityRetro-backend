@@ -14,7 +14,7 @@ public interface CardRepository extends JpaRepository<Card, Long> {
     SELECT c FROM Card c
     WHERE c.id NOT IN (
         SELECT sc.card.id FROM SessionCard sc
-        WHERE sc.session.code = :sessionCode AND sc.status = 'PLAYED'
+        WHERE sc.session.code = :sessionCode
     )
 """)
     List<Card> findAvailableCards(@Param("sessionCode") String sessionCode);
