@@ -20,12 +20,6 @@ public class SessionCard {
     @JoinColumn(name = "card_id")
     private Card card;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Status status;
-
-    public enum Status {
-        FREE, PLAYED
-    }
-
+    @Column(name = "slot_id")
+    private String slotId;
 }

@@ -2,21 +2,16 @@ package com.retro.retro_against_humanity_backend.service;
 
 import com.retro.retro_against_humanity_backend.dto.*;
 import com.retro.retro_against_humanity_backend.entity.ActiveSession;
-import com.retro.retro_against_humanity_backend.entity.Card;
 import com.retro.retro_against_humanity_backend.entity.SessionPlayer;
 import com.retro.retro_against_humanity_backend.entity.Users;
 import com.retro.retro_against_humanity_backend.repository.ActiveSessionRepository;
-import com.retro.retro_against_humanity_backend.repository.CardRepository;
 import com.retro.retro_against_humanity_backend.repository.SessionPlayerRepository;
 import com.retro.retro_against_humanity_backend.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.User;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.AccessDeniedException;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,40 +22,10 @@ public class GameSessionService {
     private final ActiveSessionRepository sessionRepository;
     private final SessionPlayerRepository sessionPlayerRepository;
     private final UserRepository userRepository;
-    private final CardRepository cardRepository;
+    private final CardService cardService;
 
     @Transactional
     public Users joinSession(String sessionCode, String username, String email) {
-//        Users user = userRepository.findByUsername(username)
-//                .orElseGet(() -> userRepository.save(new Users(null, email, username, 0)));
-//        ActiveSession session = getSessionByCode(sessionCode);
-//
-//        sessionPlayerRepository.findByUserAndSession(user, session).orElseGet(() -> {
-//
-//            Integer maxTurnOrder = sessionPlayerRepository.findMaxTurnOrderBySession(session)
-//                    .orElse(0);
-//
-//            SessionPlayer newPlayer = new SessionPlayer();
-//            newPlayer.setSession(session);
-//            newPlayer.setUser(user);
-//            newPlayer.setScore(0);
-//            newPlayer.setTurnOrder(maxTurnOrder + 1);
-//            return sessionPlayerRepository.save(newPlayer);
-//        });
-//
-//        boolean sessionUpdated = false;
-//        if (session.getHostUserId() == null) {
-//            session.setHostUserId(user.getId());
-//            sessionUpdated = true;
-//        }
-//
-//        if (session.getCardHolderId() == null) {
-//            session.setCardHolderId(user.getId());
-//            sessionUpdated = true;
-//        }
-//        if(sessionUpdated) {
-//            sessionRepository.save(session);
-//        }
         Users user = userRepository.findByUsername(username)
                 .orElseGet(() -> userRepository.save(new Users(null, email, username, 0)));
 
@@ -90,8 +55,6 @@ public class GameSessionService {
         if (sessionUpdated) {
             sessionRepository.save(session);
         }
-
-        // Return the full user object so the caller can get the ID
         return user;
     }
 
@@ -151,6 +114,7 @@ public class GameSessionService {
 
     @Transactional
     public EndRoundResult endRound(String sessionCode, int numberOfCards) {
+        cardService.clearPlayedCardSlots(sessionCode);
         ActiveSession session = getSessionByCode(sessionCode);
 
         List<SessionPlayer> players = sessionPlayerRepository.findBySessionOrderByTurnOrderAsc(session);
@@ -170,22 +134,9 @@ public class GameSessionService {
         session.setCardHolderId(newCardHolderId);
         sessionRepository.save(session);
 
-        List<CardDto> cardsToDealDto = getCardsForNextRound(sessionCode, numberOfCards);
+        List<CardDto> cardsToDealDto = cardService.getCardsForNextRound(sessionCode, numberOfCards);
 
         return new EndRoundResult(false, newCardHolderId, cardsToDealDto);
-    }
-
-    public List<CardDto> getCardsForNextRound(String sessionCode, int numberOfCards) {
-        List<Card> availableCards = cardRepository.findAvailableCards(sessionCode);
-        Collections.shuffle(availableCards);
-        List<Card> cardsToDeal = availableCards.stream().limit(numberOfCards).toList();
-        return cardsToDeal.stream()
-                .map(card -> CardDto.builder()
-                        .id(card.getId())
-                        .content(card.getContent())
-                        .type(card.getType())
-                        .build())
-                .toList();
     }
 
     private int findPlayerIndexByUserId(List<SessionPlayer> players, Long userId) {
