@@ -1,0 +1,1 @@
+ALTER TABLE session_card ADD COLUMN slot_id TEXT;
