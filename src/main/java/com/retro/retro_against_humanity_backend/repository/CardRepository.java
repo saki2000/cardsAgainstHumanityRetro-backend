@@ -18,4 +18,14 @@ public interface CardRepository extends JpaRepository<Card, Long> {
     )
 """)
     List<Card> findAvailableCards(@Param("sessionCode") String sessionCode);
+
+    @Query("""
+    SELECT c FROM Card c
+    WHERE c.type = :type
+    AND c.id NOT IN 
+        (SELECT sc.card.id 
+         FROM SessionCard sc 
+         WHERE sc.session.code = :sessionCode)
+ """)
+    List<Card> findAvailableCardsByType(@Param("sessionCode") String sessionCode, @Param("type") Card.CardType type);
 }

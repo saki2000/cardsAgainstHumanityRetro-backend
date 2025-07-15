@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -17,4 +18,5 @@ public class GameStateDto {
     private Long cardHolderId;
     private List<PlayerDto> players;
     private boolean sessionStarted;
+    Map<String, CardDto> slots;
 }

@@ -3,6 +3,8 @@ package com.retro.retro_against_humanity_backend.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.List;
+
 @Entity
 @Table(name = "session_card")
 @Data
@@ -22,4 +24,7 @@ public class SessionCard {
 
     @Column(name = "slot_id")
     private String slotId;
+
+    @OneToMany(mappedBy = "sessionCard", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Comment> comments;
 }
