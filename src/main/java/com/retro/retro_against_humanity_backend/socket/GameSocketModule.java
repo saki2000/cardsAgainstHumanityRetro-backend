@@ -41,6 +41,7 @@ public class GameSocketModule {
         server.addEventListener("end_session", EndSessionPayload.class, this::onEndSession);
         server.addEventListener("start_session", SessionStartedPayload.class, this::onSessionStarted);
         server.addEventListener("play_card", PlayCardPayload.class, this::onPlayCard);
+        server.addEventListener("submit_comment", SubmitCommentPayload.class, this::onSubmitComment);
     }
 
     private void onConnect(SocketIOClient client) {
@@ -144,5 +145,12 @@ public class GameSocketModule {
 
         Map<String, CardDto> updatedSlots = cardService.getPlayedCardsForRound(data.sessionCode());
         server.getRoomOperations(data.sessionCode()).sendEvent("slots_updated", updatedSlots);
+    }
+
+    private void onSubmitComment(SocketIOClient client, SubmitCommentPayload payload, AckRequest ackRequest) {
+        ClientData data = clientDataMap.get(client.getSessionId().toString());
+
+        cardService.submitComment(payload.sessionCode(), payload.sessionCardId(), payload.commentText(), data.userId());
+        broadcastGameState(payload.sessionCode());
     }
 }

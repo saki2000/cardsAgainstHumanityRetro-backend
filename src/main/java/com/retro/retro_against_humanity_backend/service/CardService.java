@@ -1,12 +1,8 @@
 package com.retro.retro_against_humanity_backend.service;
 
 import com.retro.retro_against_humanity_backend.dto.CardDto;
-import com.retro.retro_against_humanity_backend.entity.ActiveSession;
-import com.retro.retro_against_humanity_backend.entity.Card;
-import com.retro.retro_against_humanity_backend.entity.SessionCard;
-import com.retro.retro_against_humanity_backend.repository.ActiveSessionRepository;
-import com.retro.retro_against_humanity_backend.repository.CardRepository;
-import com.retro.retro_against_humanity_backend.repository.SessionCardRepository;
+import com.retro.retro_against_humanity_backend.entity.*;
+import com.retro.retro_against_humanity_backend.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +20,8 @@ public class CardService {
     private final CardRepository cardRepository;
     private final SessionCardRepository sessionCardRepository;
     private final ActiveSessionRepository activeSessionRepository;
+    private final SessionPlayerRepository sessionPlayerRepository;
+    private final CommentRepository commentRepository;
 
     @Transactional
     public void clearPlayedCardSlots(String sessionCode) {
@@ -77,4 +75,18 @@ public class CardService {
                        )
                ));
    }
+
+    @Transactional
+    public void submitComment(String sessionCode, long sessionCardId, String commentText, Long authorUserId) {
+        SessionPlayer authorPlayer = sessionPlayerRepository.findBySessionCodeAndUserId(sessionCode, authorUserId)
+                .orElseThrow(() -> new EntityNotFoundException("Player not found in session"));
+        SessionCard sessionCard = sessionCardRepository.findById(sessionCardId)
+                .orElseThrow(() -> new EntityNotFoundException("Played card not found"));
+
+        Comment comment = new Comment();
+        comment.setSessionCard(sessionCard);
+        comment.setAuthorPlayer(authorPlayer);
+        comment.setContent(commentText);
+        commentRepository.save(comment);
+    }
 }
