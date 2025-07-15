@@ -58,7 +58,6 @@ public class GameSessionService {
         return user;
     }
 
-
     @Transactional
     public LeaveSessionResult leaveSession(String sessionCode, String username) {
         Users leavingUser = getUserByUsername(username);
@@ -148,6 +147,15 @@ public class GameSessionService {
         return -1;
     }
 
+    @Transactional
+    public GameStateDto getGameState(String sessionCode) {
+        ActiveSession session = getSessionByCode(sessionCode);
+        List<PlayerDto> players = getPlayersFromSession(session);
+        boolean gameStarted = getSessionStarted(sessionCode);
+
+        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players, gameStarted);
+    }
+
     private Users getUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
@@ -158,20 +166,18 @@ public class GameSessionService {
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
     }
 
-    @Transactional
-    public GameStateDto getGameState(String sessionCode) {
-        ActiveSession session = sessionRepository.findByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
-
-        List<PlayerDto> players = sessionPlayerRepository.findBySession(session).stream()
+    private List<PlayerDto> getPlayersFromSession(ActiveSession session) {
+        return sessionPlayerRepository.findBySession(session).stream()
                 .map(sp -> new PlayerDto(sp.getUser().getId(), sp.getUser().getUsername()))
                 .collect(Collectors.toList());
-
-        boolean gameStarted = sessionRepository.findSessionStartedByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
-
-        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players, gameStarted);
     }
+
+    private boolean getSessionStarted(String sessionCode) {
+        return sessionRepository.findSessionStartedByCode(sessionCode)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
+    }
+
+
 
     @Transactional
     public void endSession(String sessionCode) {
