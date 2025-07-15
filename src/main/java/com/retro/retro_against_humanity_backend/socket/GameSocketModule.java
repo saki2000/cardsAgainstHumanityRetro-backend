@@ -41,6 +41,7 @@ public class GameSocketModule {
         server.addEventListener("start_session", SessionStartedPayload.class, this::onSessionStarted);
         server.addEventListener("play_card", PlayCardPayload.class, this::onPlayCard);
         server.addEventListener("submit_comment", SubmitCommentPayload.class, this::onSubmitComment);
+        server.addEventListener("vote_comment", VoteCommentPayload.class,this::onVoteComment);
     }
 
     private void onConnect(SocketIOClient client) {
@@ -121,7 +122,13 @@ public class GameSocketModule {
     private void onSubmitComment(SocketIOClient client, SubmitCommentPayload payload, AckRequest ackRequest) {
         ClientData data = clientDataMap.get(client.getSessionId().toString());
         cardService.submitComment(payload.sessionCode(), payload.sessionCardId(), payload.content(), data.userId());
-        broadcastGameState(payload.sessionCode());
+        broadcastGameState(data.sessionCode());
+    }
+
+    private void onVoteComment(SocketIOClient client, VoteCommentPayload payload, AckRequest ackRequest) {
+        ClientData data = clientDataMap.get(client.getSessionId().toString());
+        cardService.voteComment(data.sessionCode(), payload.commentId(), data.userId());
+        broadcastGameState(data.sessionCode());
     }
 
     private void broadcastGameState(String sessionCode) {

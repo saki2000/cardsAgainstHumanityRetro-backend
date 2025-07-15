@@ -9,9 +9,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -23,6 +21,7 @@ public class CardService {
     private final ActiveSessionRepository activeSessionRepository;
     private final SessionPlayerRepository sessionPlayerRepository;
     private final CommentRepository commentRepository;
+    private final VoteRepository voteRepository;
 
     @Transactional
     public void clearPlayedCardSlots(String sessionCode) {
@@ -83,7 +82,7 @@ public class CardService {
                                            comment.getId(),
                                            comment.getAuthorPlayer().getUser().getUsername(),
                                            comment.getContent(),
-                                           0 // TODO: Implement vote counting
+                                           comment.getVoteCount()
                                    ))
                                    .collect(Collectors.toList());
 
@@ -110,5 +109,28 @@ public class CardService {
         comment.setAuthorPlayer(authorPlayer);
         comment.setContent(commentText);
         commentRepository.save(comment);
+    }
+
+    @Transactional
+    public void voteComment(String sessionCode, Long commentId, Long voterUserId) {
+        SessionPlayer voter = sessionPlayerRepository.findBySessionCodeAndUserId(sessionCode, voterUserId)
+                .orElseThrow(() -> new EntityNotFoundException("Player not found in session: " + voterUserId));
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new EntityNotFoundException("Comment not found: " + commentId));
+
+        if (comment.getAuthorPlayer().getId().equals(voter.getId())) {
+//            throw new IllegalStateException("Players cannot vote for their own comments.");
+            return;  //TODO: Maybe throw an exception instead and handle it in the frontend ?
+        }
+
+        Optional<Vote> existingVote = voteRepository.findByCommentIdAndVoterId(commentId, voter.getId());
+
+        if (existingVote.isPresent()) {
+            voteRepository.delete(existingVote.get());
+        } else {
+            Vote newVote = new Vote(commentId, voter);
+            voteRepository.save(newVote);
+        }
     }
 }
