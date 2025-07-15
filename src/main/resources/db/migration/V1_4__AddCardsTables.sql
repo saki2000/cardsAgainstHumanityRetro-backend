@@ -1,9 +1,7 @@
-CREATE TYPE card_type AS ENUM ('GOOD', 'BAD', 'OTHER');
-
 CREATE TABLE cards (
                        id SERIAL PRIMARY KEY,
                        content TEXT NOT NULL,
-                       type card_type NOT NULL
+                       type VARCHAR(255) NOT NULL CHECK (type IN ('GOOD', 'BAD', 'OTHER'))
 );
 
 CREATE TABLE session_card (

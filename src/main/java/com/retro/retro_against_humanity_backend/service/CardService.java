@@ -35,9 +35,16 @@ public class CardService {
 
     @Transactional
     public List<CardDto> getCardsForNextRound(String sessionCode, int numberOfCards) {
-        List<Card> availableCards = cardRepository.findAvailableCards(sessionCode);
-        Collections.shuffle(availableCards);
-        List<Card> cardsToDeal = availableCards.stream().limit(numberOfCards).toList();
+        final int cardsPerType = numberOfCards / 3; // Got 3 types of cards
+        List<Card> cardsToDeal = new ArrayList<>();
+
+        for (Card.CardType type : Card.CardType.values()) {
+            List<Card> availableCards = cardRepository.findAvailableCardsByType(sessionCode, type);
+            Collections.shuffle(availableCards);
+            List<Card> drawnCards = availableCards.stream().limit(cardsPerType).toList();
+            cardsToDeal.addAll(drawnCards);
+        }
+
         return cardsToDeal.stream()
                 .map(card -> CardDto.builder()
                         .id(card.getId())
