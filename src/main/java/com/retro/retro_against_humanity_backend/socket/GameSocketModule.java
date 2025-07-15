@@ -120,7 +120,7 @@ public class GameSocketModule {
 
     private void onSubmitComment(SocketIOClient client, SubmitCommentPayload payload, AckRequest ackRequest) {
         ClientData data = clientDataMap.get(client.getSessionId().toString());
-        cardService.submitComment(payload.sessionCode(), payload.sessionCardId(), payload.commentText(), data.userId());
+        cardService.submitComment(payload.sessionCode(), payload.sessionCardId(), payload.content(), data.userId());
         broadcastGameState(payload.sessionCode());
     }
 

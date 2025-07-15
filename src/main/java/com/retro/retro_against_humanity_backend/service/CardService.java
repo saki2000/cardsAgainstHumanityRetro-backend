@@ -95,8 +95,6 @@ public class CardService {
         SessionPlayer authorPlayer = sessionPlayerRepository.findBySessionCodeAndUserId(sessionCode, authorUserId)
                 .orElseThrow(() -> new EntityNotFoundException("Player not found in session"));
 
-        System.out.println("Author Player: " + authorPlayer.getUser().getUsername() + " sessionCardId: " + sessionCardId + " commentText: " + commentText + " authorUserId: " + authorUserId);
-
         SessionCard sessionCard = sessionCardRepository.findById(sessionCardId)
                 .orElseThrow(() -> new EntityNotFoundException("Played card not found"));
 
