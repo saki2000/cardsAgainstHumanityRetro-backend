@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -152,8 +153,10 @@ public class GameSessionService {
         ActiveSession session = getSessionByCode(sessionCode);
         List<PlayerDto> players = getPlayersFromSession(session);
         boolean gameStarted = getSessionStarted(sessionCode);
+        Map<String, CardDto> slots = cardService.getPlayedCardsForRound(sessionCode);
 
-        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players, gameStarted);
+        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players, gameStarted,
+                slots);
     }
 
     private Users getUserByUsername(String username) {

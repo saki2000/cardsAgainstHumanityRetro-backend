@@ -13,7 +13,6 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -93,8 +92,6 @@ public class GameSocketModule {
             broadcastCardsToPlayer(endRoundResult.getNewCardHolderId(), endRoundResult.getCardsToDeal());
             // Broadcast the new public game state to everyone
             broadcastGameState(payload.sessionCode());
-            // Clear the slots for the next round
-            broadcastClearSlots(payload.sessionCode());
         }
     }
 
@@ -112,6 +109,19 @@ public class GameSocketModule {
         broadcastGameState(data.sessionCode());
         List<CardDto> cardHolderCard = cardService.getCardsForNextRound (data.sessionCode(), MAX_CARDS_PER_ROUND);
         broadcastCardsToPlayer(data.userId(), cardHolderCard);
+    }
+
+    private void onPlayCard(SocketIOClient client, PlayCardPayload payload, AckRequest ackRequest) {
+        ClientData data = clientDataMap.get(client.getSessionId().toString());
+        System.out.println("User " + data.username() + " played a card in session " + data.sessionCode());
+        cardService.playCard(data.sessionCode(), payload.cardId(), payload.slotId());
+        broadcastGameState(data.sessionCode());
+    }
+
+    private void onSubmitComment(SocketIOClient client, SubmitCommentPayload payload, AckRequest ackRequest) {
+        ClientData data = clientDataMap.get(client.getSessionId().toString());
+        cardService.submitComment(payload.sessionCode(), payload.sessionCardId(), payload.commentText(), data.userId());
+        broadcastGameState(payload.sessionCode());
     }
 
     private void broadcastGameState(String sessionCode) {
@@ -132,25 +142,5 @@ public class GameSocketModule {
         } else {
             System.err.println("Could not find active client for user ID: " + userId + " to deal cards.");
         }
-    }
-
-    private void broadcastClearSlots(String sessionCode) {
-        server.getRoomOperations(sessionCode).sendEvent("slots_updated", new HashMap<>());
-    }
-
-    private void onPlayCard(SocketIOClient client, PlayCardPayload payload, AckRequest ackRequest) {
-        ClientData data = clientDataMap.get(client.getSessionId().toString());
-        System.out.println("User " + data.username() + " played a card in session " + data.sessionCode());
-        cardService.playCard(data.sessionCode(), payload.cardId(), payload.slotId());
-
-        Map<String, CardDto> updatedSlots = cardService.getPlayedCardsForRound(data.sessionCode());
-        server.getRoomOperations(data.sessionCode()).sendEvent("slots_updated", updatedSlots);
-    }
-
-    private void onSubmitComment(SocketIOClient client, SubmitCommentPayload payload, AckRequest ackRequest) {
-        ClientData data = clientDataMap.get(client.getSessionId().toString());
-
-        cardService.submitComment(payload.sessionCode(), payload.sessionCardId(), payload.commentText(), data.userId());
-        broadcastGameState(payload.sessionCode());
     }
 }
