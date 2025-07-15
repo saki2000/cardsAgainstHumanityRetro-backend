@@ -82,7 +82,7 @@ public class GameSocketModule {
     }
 
     private void onEndRound(SocketIOClient client, EndRoundPayload payload, AckRequest ackRequest) {
-        ClientData data = clientDataMap.get(client.getSessionId()); //
+        ClientData data = clientDataMap.get(client.getSessionId()); //TODO: Check if this is correct
 
         EndRoundResult endRoundResult = gameSessionService.endRound(payload.sessionCode(), MAX_CARDS_PER_ROUND);
 
