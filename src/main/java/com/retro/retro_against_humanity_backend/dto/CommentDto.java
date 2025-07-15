@@ -1,20 +1,17 @@
 package com.retro.retro_against_humanity_backend.dto;
 
-import com.retro.retro_against_humanity_backend.entity.Card;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CardDto {
+public class CommentDto {
     private Long id;
-    private Long sessionCardId;
+    private String authorName;
     private String content;
-    private List<CommentDto> comments;
+    private int voteCount;
 }

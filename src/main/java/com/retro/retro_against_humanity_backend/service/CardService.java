@@ -1,6 +1,7 @@
 package com.retro.retro_against_humanity_backend.service;
 
 import com.retro.retro_against_humanity_backend.dto.CardDto;
+import com.retro.retro_against_humanity_backend.dto.CommentDto;
 import com.retro.retro_against_humanity_backend.entity.*;
 import com.retro.retro_against_humanity_backend.repository.*;
 import jakarta.persistence.EntityNotFoundException;
@@ -40,8 +41,9 @@ public class CardService {
         return cardsToDeal.stream()
                 .map(card -> CardDto.builder()
                         .id(card.getId())
+                        .sessionCardId(null) // This will be set when the card is played
                         .content(card.getContent())
-                        .type(card.getType())
+                        .comments(Collections.emptyList())
                         .build())
                 .toList();
     }
@@ -68,11 +70,23 @@ public class CardService {
        return playedCards.stream()
                .collect(Collectors.toMap(
                        SessionCard::getSlotId,
-                       sc -> new CardDto(
-                               sc.getCard().getId(),
-                               sc.getCard().getContent(),
-                               sc.getCard().getType()
-                       )
+                       sc -> {
+                           List<CommentDto> commentDtos = sc.getComments().stream()
+                                   .map(comment -> new CommentDto(
+                                           comment.getId(),
+                                           comment.getAuthorPlayer().getUser().getUsername(),
+                                           comment.getContent(),
+                                           0 // TODO: Implement vote counting
+                                   ))
+                                   .collect(Collectors.toList());
+
+                           return new CardDto(
+                                   sc.getCard().getId(),
+                                   sc.getId(), // sessionCardId
+                                   sc.getCard().getContent(),
+                                   commentDtos
+                           );
+                       }
                ));
    }
 
@@ -80,6 +94,9 @@ public class CardService {
     public void submitComment(String sessionCode, long sessionCardId, String commentText, Long authorUserId) {
         SessionPlayer authorPlayer = sessionPlayerRepository.findBySessionCodeAndUserId(sessionCode, authorUserId)
                 .orElseThrow(() -> new EntityNotFoundException("Player not found in session"));
+
+        System.out.println("Author Player: " + authorPlayer.getUser().getUsername() + " sessionCardId: " + sessionCardId + " commentText: " + commentText + " authorUserId: " + authorUserId);
+
         SessionCard sessionCard = sessionCardRepository.findById(sessionCardId)
                 .orElseThrow(() -> new EntityNotFoundException("Played card not found"));
 
