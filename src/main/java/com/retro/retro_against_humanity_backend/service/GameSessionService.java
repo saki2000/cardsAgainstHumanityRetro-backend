@@ -171,7 +171,11 @@ public class GameSessionService {
 
     private List<PlayerDto> getPlayersFromSession(ActiveSession session) {
         return sessionPlayerRepository.findBySession(session).stream()
-                .map(sp -> new PlayerDto(sp.getUser().getId(), sp.getUser().getUsername()))
+                .map(sp -> new PlayerDto(
+                        sp.getUser().getId(),
+                        sp.getUser().getUsername(),
+                        sp.getScore()
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -179,8 +183,6 @@ public class GameSessionService {
         return sessionRepository.findSessionStartedByCode(sessionCode)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
     }
-
-
 
     @Transactional
     public void endSession(String sessionCode) {

@@ -134,7 +134,6 @@ public class GameSocketModule {
     private void broadcastGameState(String sessionCode) {
         try {
             GameStateDto gameState = gameSessionService.getGameState(sessionCode);
-            System.out.println("Game State: " + gameState); //TODO: Remove later
             server.getRoomOperations(sessionCode).sendEvent("game_state_update", gameState);
         } catch (EntityNotFoundException e) {
             System.err.println("Attempted to broadcast state for a non-existent or empty session: " + sessionCode);
