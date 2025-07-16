@@ -28,7 +28,7 @@ public class GameSessionService {
     @Transactional
     public Users joinSession(String sessionCode, String username, String email) {
         Users user = userRepository.findByUsername(username)
-                .orElseGet(() -> userRepository.save(new Users(null, email, username, 0)));
+                .orElseGet(() -> userRepository.save(new Users(null, email, username, 0, 0)));
 
         ActiveSession session = getSessionByCode(sessionCode);
 

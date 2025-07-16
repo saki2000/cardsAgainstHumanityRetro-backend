@@ -13,5 +13,9 @@ public class Constants {
         public static final String SESSION_CODE_PATTERN_MESSAGE = "Session ID must be alphanumeric";
         public static final String SESSION_NOT_FOUND_MESSAGE = "Session not found";
     }
+    public static final class Users{
+        private Users() {}
 
+        public static final String USER_NOT_FOUND_MESSAGE = "User not found";
+    }
 }

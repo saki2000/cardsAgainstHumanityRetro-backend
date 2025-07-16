@@ -23,4 +23,7 @@ public class Users {
 
     @Column(name = "best_score", nullable = false)
     private int bestScore = 0;
+
+    @Column(name = "games_played", nullable = false)
+    private int gamesPlayed = 0;
 }
