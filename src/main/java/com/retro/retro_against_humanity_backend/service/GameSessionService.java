@@ -119,11 +119,12 @@ public class GameSessionService {
     @Transactional
     public GameStateDto getGameState(String sessionCode) {
         ActiveSession session = getSessionByCode(sessionCode);
+        int roundNumber = session.getRoundNumber();
         List<PlayerDto> players = getPlayersFromSession(session);
         boolean gameStarted = getSessionStarted(sessionCode);
         Map<String, CardDto> slots = cardService.getPlayedCardsForRound(sessionCode);
 
-        return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players, gameStarted,
+        return new GameStateDto(session.getCode(), roundNumber, session.getHostUserId(), session.getCardHolderId(), players, gameStarted,
                 slots);
     }
 

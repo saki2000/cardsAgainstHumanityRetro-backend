@@ -26,6 +26,9 @@ public class ActiveSession {
     @Column(name = "card_holder_id")
     private Long cardHolderId;
 
+    @Column(name = "round_number", nullable = false)
+    private int roundNumber = 0;
+
     @Column(name = "session_started", nullable = false)
     private boolean sessionStarted = false;
 
