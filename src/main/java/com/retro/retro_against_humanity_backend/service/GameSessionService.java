@@ -45,48 +45,21 @@ public class GameSessionService {
         Long oldHostId = session.getHostUserId();
         Long oldCardHolderId = session.getCardHolderId();
 
-        List<SessionPlayer> playersBeforeRemoval = sessionPlayerRepository.findBySessionOrderByCreatedAtAsc(session);
+        List<SessionPlayer> players = sessionPlayerRepository.findBySessionOrderByCreatedAtAsc(session);
 
         sessionPlayerRepository.deleteByUserAndSession(leavingUser, session);
 
-        if (playersBeforeRemoval.size() == 1) {
+        if (players.size() == 1) {
             sessionRepository.delete(session);
             return LeaveSessionResult.sessionDeleted();
         }
 
-        List<SessionPlayer> remainingPlayers = playersBeforeRemoval.stream()
-                .filter(p -> !p.getUser().getId().equals(leavingUserId))
-                .toList();
-
-        if (leavingUserId.equals(oldHostId)) {
-            SessionPlayer newHost = remainingPlayers.get(0);
-            session.setHostUserId(newHost.getUser().getId());
-        }
-
-        if (leavingUserId.equals(oldCardHolderId)) {
-            int leavingPlayerIndex = findPlayerIndexByUserId(playersBeforeRemoval, leavingUserId);
-
-            int newCardHolderIndex = (leavingPlayerIndex + 1) % playersBeforeRemoval.size();
-
-            SessionPlayer nextPlayerInOriginalOrder = playersBeforeRemoval.get(newCardHolderIndex);
-
-            if(nextPlayerInOriginalOrder.getUser().getId().equals(leavingUserId)) {
-                newCardHolderIndex = (newCardHolderIndex + 1) % playersBeforeRemoval.size();
-                nextPlayerInOriginalOrder = playersBeforeRemoval.get(newCardHolderIndex);
-            }
-
-            session.setCardHolderId(nextPlayerInOriginalOrder.getUser().getId());
-        }
+        updateHostIfNeeded(session, leavingUserId, players);
+        updateCardHolderIfNeeded(session, leavingUserId, players);
 
         sessionRepository.save(session);
 
-        return new LeaveSessionResult(
-                false,
-                oldHostId,
-                session.getHostUserId(),
-                oldCardHolderId,
-                session.getCardHolderId()
-        );
+        return new LeaveSessionResult(false, oldHostId, session.getHostUserId(), oldCardHolderId, session.getCardHolderId());
     }
 
     @Transactional
@@ -218,5 +191,30 @@ public class GameSessionService {
             }
         }
         return -1;
+    }
+
+    private void updateHostIfNeeded(ActiveSession session, Long leavingUserId, List<SessionPlayer> players) {
+        if (leavingUserId.equals(session.getHostUserId())) {
+            SessionPlayer newHost = players.stream()
+                    .filter(p -> !p.getUser().getId().equals(leavingUserId))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No players left to assign as host."));
+            session.setHostUserId(newHost.getUser().getId());
+        }
+    }
+
+    private void updateCardHolderIfNeeded(ActiveSession session, Long leavingUserId, List<SessionPlayer> players) {
+        if (leavingUserId.equals(session.getCardHolderId())) {
+            int leavingPlayerIndex = findPlayerIndexByUserId(players, leavingUserId);
+            int nextPlayerIndex = (leavingPlayerIndex + 1) % players.size();
+            SessionPlayer newCardHolder = players.get(nextPlayerIndex);
+
+            // If the next player is the one who is leaving, skip to the following one.
+            if (newCardHolder.getUser().getId().equals(leavingUserId)) {
+                nextPlayerIndex = (nextPlayerIndex + 1) % players.size();
+                newCardHolder = players.get(nextPlayerIndex);
+            }
+            session.setCardHolderId(newCardHolder.getUser().getId());
+        }
     }
 }
