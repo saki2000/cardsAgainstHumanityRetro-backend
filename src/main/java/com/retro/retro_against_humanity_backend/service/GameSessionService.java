@@ -27,21 +27,10 @@ public class GameSessionService {
 
     @Transactional
     public Users joinSession(String sessionCode, String username, String email) {
+
         Users user = findOrCreateUser(username, email);
-
         ActiveSession session = getSessionByCode(sessionCode);
-
-        sessionPlayerRepository.findByUserAndSession(user, session).orElseGet(() -> {
-            Integer maxTurnOrder = sessionPlayerRepository.findMaxTurnOrderBySession(session)
-                    .orElse(0); // If no players, maxTurnOrder is 0.
-
-            SessionPlayer newPlayer = new SessionPlayer();
-            newPlayer.setSession(session);
-            newPlayer.setUser(user);
-            newPlayer.setScore(0);
-            newPlayer.setTurnOrder(maxTurnOrder + 1); // New player gets the next turn order.
-            return sessionPlayerRepository.save(newPlayer);
-        });
+        findSessionPlayer(user, session);
 
         boolean sessionUpdated = false;
         if (session.getHostUserId() == null) {
@@ -184,6 +173,20 @@ public class GameSessionService {
     private Users findOrCreateUser(String username, String email) {
         return userRepository.findByUsername(username)
                 .orElseGet(() -> userRepository.save(new Users(null, email, username, 0, 0, 0)));
+    }
+
+    private void findSessionPlayer(Users user, ActiveSession session) {
+        sessionPlayerRepository.findByUserAndSession(user, session).orElseGet(() -> {
+            Integer maxTurnOrder = sessionPlayerRepository.findMaxTurnOrderBySession(session)
+                    .orElse(0); // If no players, maxTurnOrder is 0.
+
+            SessionPlayer newPlayer = new SessionPlayer();
+            newPlayer.setSession(session);
+            newPlayer.setUser(user);
+            newPlayer.setScore(0);
+            newPlayer.setTurnOrder(maxTurnOrder + 1); // New player gets the next turn order.
+            return sessionPlayerRepository.save(newPlayer);
+        });
     }
 
     private List<PlayerDto> getPlayersFromSession(ActiveSession session) {
