@@ -58,11 +58,6 @@ public class GameSessionService {
         return user;
     }
 
-    private Users findOrCreateUser(String username, String email) {
-        return userRepository.findByUsername(username)
-                .orElseGet(() -> userRepository.save(new Users(null, email, username, 0, 0, 0)));
-    }
-
     @Transactional
     public LeaveSessionResult leaveSession(String sessionCode, String username) {
         Users leavingUser = getUserByUsername(username);
@@ -143,15 +138,6 @@ public class GameSessionService {
         return new EndRoundResult(false, newCardHolderId, cardsToDealDto);
     }
 
-    private int findPlayerIndexByUserId(List<SessionPlayer> players, Long userId) {
-        for (int i = 0; i < players.size(); i++) {
-            if (players.get(i).getUser().getId().equals(userId)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     @Transactional
     public GameStateDto getGameState(String sessionCode) {
         ActiveSession session = getSessionByCode(sessionCode);
@@ -161,31 +147,6 @@ public class GameSessionService {
 
         return new GameStateDto(session.getCode(), session.getHostUserId(), session.getCardHolderId(), players, gameStarted,
                 slots);
-    }
-
-    private Users getUserByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
-    }
-
-    private ActiveSession getSessionByCode(String sessionCode) {
-        return sessionRepository.findByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
-    }
-
-    private List<PlayerDto> getPlayersFromSession(ActiveSession session) {
-        return sessionPlayerRepository.findBySession(session).stream()
-                .map(sp -> new PlayerDto(
-                        sp.getUser().getId(),
-                        sp.getUser().getUsername(),
-                        sp.getScore()
-                ))
-                .collect(Collectors.toList());
-    }
-
-    private boolean getSessionStarted(String sessionCode) {
-        return sessionRepository.findSessionStartedByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
     }
 
     @Transactional
@@ -203,5 +164,44 @@ public class GameSessionService {
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
         session.setSessionStarted(true);
         sessionRepository.save(session);
+    }
+
+    private Users getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
+    }
+
+    private ActiveSession getSessionByCode(String sessionCode) {
+        return sessionRepository.findByCode(sessionCode)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
+    }
+
+    private boolean getSessionStarted(String sessionCode) {
+        return sessionRepository.findSessionStartedByCode(sessionCode)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
+    }
+
+    private Users findOrCreateUser(String username, String email) {
+        return userRepository.findByUsername(username)
+                .orElseGet(() -> userRepository.save(new Users(null, email, username, 0, 0, 0)));
+    }
+
+    private List<PlayerDto> getPlayersFromSession(ActiveSession session) {
+        return sessionPlayerRepository.findBySession(session).stream()
+                .map(sp -> new PlayerDto(
+                        sp.getUser().getId(),
+                        sp.getUser().getUsername(),
+                        sp.getScore()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private int findPlayerIndexByUserId(List<SessionPlayer> players, Long userId) {
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i).getUser().getId().equals(userId)) {
+                return i;
+            }
+        }
+        return -1;
     }
 }
