@@ -87,6 +87,7 @@ public class GameSocketModule {
         if (endRoundResult.isSessionEnded()) {
             server.getRoomOperations(payload.sessionCode()).sendEvent("session_ended");
         } else {
+            gameSessionService.updateRound(payload.sessionCode());
             // Deal cards privately to the new cardholder
             broadcastCardsToPlayer(endRoundResult.getNewCardHolderId(), endRoundResult.getCardsToDeal());
             // Broadcast the new public game state to everyone

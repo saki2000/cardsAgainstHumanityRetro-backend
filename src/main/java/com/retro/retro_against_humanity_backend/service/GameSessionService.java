@@ -139,9 +139,16 @@ public class GameSessionService {
 
     @Transactional
     public void startSession(String sessionCode) {
-        ActiveSession session = sessionRepository.findByCode(sessionCode)
-                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
+        ActiveSession session = getSessionByCode(sessionCode);
         session.setSessionStarted(true);
+        updateRound(sessionCode);
+        sessionRepository.save(session);
+    }
+
+    @Transactional
+    public void updateRound(String sessionCode) {
+        ActiveSession session = getSessionByCode(sessionCode);
+        session.setRoundNumber(session.getRoundNumber() + 1);
         sessionRepository.save(session);
     }
 
