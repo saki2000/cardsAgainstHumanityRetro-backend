@@ -27,8 +27,7 @@ public class GameSessionService {
 
     @Transactional
     public Users joinSession(String sessionCode, String username, String email) {
-        Users user = userRepository.findByUsername(username)
-                .orElseGet(() -> userRepository.save(new Users(null, email, username, 0, 0)));
+        Users user = findOrCreateUser(username, email);
 
         ActiveSession session = getSessionByCode(sessionCode);
 
@@ -57,6 +56,11 @@ public class GameSessionService {
             sessionRepository.save(session);
         }
         return user;
+    }
+
+    private Users findOrCreateUser(String username, String email) {
+        return userRepository.findByUsername(username)
+                .orElseGet(() -> userRepository.save(new Users(null, email, username, 0, 0, 0)));
     }
 
     @Transactional
