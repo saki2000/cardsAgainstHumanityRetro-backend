@@ -13,7 +13,7 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    public Users getUser(String userName) {
+    public Users getUserByUsername(String userName) {
         return userRepository.findByUsername(userName).orElseThrow(()-> new UserNotFoundException(Constants.Users.USER_NOT_FOUND_MESSAGE));
     }
 }

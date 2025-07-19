@@ -24,7 +24,7 @@ public class UserController {
     @PostMapping("/retrieve")
     public ResponseEntity<Users> userDetails(@Valid @RequestBody UserNameRequest request) {
 
-        Users userData = userService.getUser(request.getUserName());
+        Users userData = userService.getUserByUsername(request.getUserName());
         return ResponseEntity.ok(userData);
     }
 }
