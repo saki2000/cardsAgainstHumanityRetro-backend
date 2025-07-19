@@ -31,19 +31,8 @@ public class GameSessionService {
         Users user = findOrCreateUser(username, email);
         ActiveSession session = getSessionByCode(sessionCode);
         findSessionPlayer(user, session);
+        updateSessionHostAndCardHolder(session, user);
 
-        boolean sessionUpdated = false;
-        if (session.getHostUserId() == null) {
-            session.setHostUserId(user.getId());
-            sessionUpdated = true;
-        }
-        if (session.getCardHolderId() == null) {
-            session.setCardHolderId(user.getId());
-            sessionUpdated = true;
-        }
-        if (sessionUpdated) {
-            sessionRepository.save(session);
-        }
         return user;
     }
 
@@ -187,6 +176,21 @@ public class GameSessionService {
             newPlayer.setTurnOrder(maxTurnOrder + 1); // New player gets the next turn order.
             return sessionPlayerRepository.save(newPlayer);
         });
+    }
+
+    private void  updateSessionHostAndCardHolder(ActiveSession session, Users user) {
+        boolean sessionUpdated = false;
+        if (session.getHostUserId() == null) {
+            session.setHostUserId(user.getId());
+            sessionUpdated = true;
+        }
+        if (session.getCardHolderId() == null) {
+            session.setCardHolderId(user.getId());
+            sessionUpdated = true;
+        }
+        if (sessionUpdated) {
+            sessionRepository.save(session);
+        }
     }
 
     private List<PlayerDto> getPlayersFromSession(ActiveSession session) {
