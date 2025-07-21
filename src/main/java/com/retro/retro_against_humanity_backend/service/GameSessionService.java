@@ -2,9 +2,11 @@ package com.retro.retro_against_humanity_backend.service;
 
 import com.retro.retro_against_humanity_backend.dto.*;
 import com.retro.retro_against_humanity_backend.entity.ActiveSession;
+import com.retro.retro_against_humanity_backend.entity.SessionHistory;
 import com.retro.retro_against_humanity_backend.entity.SessionPlayer;
 import com.retro.retro_against_humanity_backend.entity.Users;
 import com.retro.retro_against_humanity_backend.repository.ActiveSessionRepository;
+import com.retro.retro_against_humanity_backend.repository.SessionHistoryRepository;
 import com.retro.retro_against_humanity_backend.repository.SessionPlayerRepository;
 import com.retro.retro_against_humanity_backend.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -24,13 +26,15 @@ public class GameSessionService {
     private final SessionPlayerRepository sessionPlayerRepository;
     private final UserRepository userRepository;
     private final CardService cardService;
+    private final SessionHistoryRepository sessionHistoryRepository;
 
     @Transactional
     public Users joinSession(String sessionCode, String username, String email) {
 
         Users user = findOrCreateUser(username, email);
         ActiveSession session = getSessionByCode(sessionCode);
-        findSessionPlayer(user, session);
+        int previousScoreInThisSession = addToSessionHistory(session, user);
+        findSessionPlayer(user, session, previousScoreInThisSession);
         updateSessionHostAndCardHolder(session, user);
 
         return user;
@@ -122,6 +126,7 @@ public class GameSessionService {
     public void updateRound(String sessionCode) {
         ActiveSession session = getSessionByCode(sessionCode);
         session.setRoundNumber(session.getRoundNumber() + 1);
+        updateHistoryScores(session);
         sessionRepository.save(session);
     }
 
@@ -145,7 +150,20 @@ public class GameSessionService {
                 .orElseGet(() -> userRepository.save(new Users(null, email, username, 0, 0, 0)));
     }
 
-    private void findSessionPlayer(Users user, ActiveSession session) {
+    private int addToSessionHistory(ActiveSession session, Users user) {
+        return sessionHistoryRepository.findByUserAndSession(user, session)
+                .map(SessionHistory::getScore)
+                .orElseGet(() -> {
+                    SessionHistory newHistory = new SessionHistory();
+                    newHistory.setUser(user);
+                    newHistory.setSession(session);
+                    newHistory.setScore(0);
+                    sessionHistoryRepository.save(newHistory);
+                    return 0;
+                });
+    }
+
+    private void findSessionPlayer(Users user, ActiveSession session, int previousScoreInThisSession) {
         sessionPlayerRepository.findByUserAndSession(user, session).orElseGet(() -> {
             Integer maxTurnOrder = sessionPlayerRepository.findMaxTurnOrderBySession(session)
                     .orElse(0); // If no players, maxTurnOrder is 0.
@@ -153,7 +171,7 @@ public class GameSessionService {
             SessionPlayer newPlayer = new SessionPlayer();
             newPlayer.setSession(session);
             newPlayer.setUser(user);
-            newPlayer.setScore(0);
+            newPlayer.setScore(previousScoreInThisSession);
             newPlayer.setTurnOrder(maxTurnOrder + 1); // New player gets the next turn order.
             return sessionPlayerRepository.save(newPlayer);
         });
@@ -215,6 +233,17 @@ public class GameSessionService {
                 newCardHolder = players.get(nextPlayerIndex);
             }
             session.setCardHolderId(newCardHolder.getUser().getId());
+        }
+    }
+
+    private void updateHistoryScores(ActiveSession session){
+        List<SessionPlayer> players = sessionPlayerRepository.findBySession(session);
+        for (SessionPlayer player : players) {
+            sessionHistoryRepository.findByUserAndSession(player.getUser(), session)
+                    .ifPresent(history -> {
+                        history.setScore(player.getScore());
+                        sessionHistoryRepository.save(history);
+                    });
         }
     }
 }
