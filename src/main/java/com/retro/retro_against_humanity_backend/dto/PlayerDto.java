@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class PlayerDto {
     private Long id;
     private String username;
+    private int score;
 }

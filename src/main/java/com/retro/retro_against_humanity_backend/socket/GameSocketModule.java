@@ -66,6 +66,7 @@ public class GameSocketModule {
                 if (!result.oldCardHolderId().equals(result.newCardHolderId())) {
                     System.out.println("Card holder changed in session " + data.sessionCode());
                     server.getRoomOperations(data.sessionCode()).sendEvent("cardholder_change", result.newCardHolderId());
+                    endRoundAndStartNewOne(data.sessionCode());
                 }
                 broadcastGameState(data.sessionCode());
             }
@@ -82,17 +83,18 @@ public class GameSocketModule {
     }
 
     private void onEndRound(SocketIOClient client, EndRoundPayload payload, AckRequest ackRequest) {
-        ClientData data = clientDataMap.get(client.getSessionId()); //TODO: Check if this is correct
+        endRoundAndStartNewOne(payload.sessionCode());
+    }
 
-        EndRoundResult endRoundResult = gameSessionService.endRound(payload.sessionCode(), MAX_CARDS_PER_ROUND);
+    private void endRoundAndStartNewOne(String sessionCode) {
+        EndRoundResult endRoundResult = gameSessionService.endRound(sessionCode, MAX_CARDS_PER_ROUND);
 
         if (endRoundResult.isSessionEnded()) {
-            server.getRoomOperations(payload.sessionCode()).sendEvent("session_ended");
+            server.getRoomOperations(sessionCode).sendEvent("session_ended");
         } else {
-            // Deal cards privately to the new cardholder
+            gameSessionService.updateRound(sessionCode);
             broadcastCardsToPlayer(endRoundResult.getNewCardHolderId(), endRoundResult.getCardsToDeal());
-            // Broadcast the new public game state to everyone
-            broadcastGameState(payload.sessionCode());
+            broadcastGameState(sessionCode);
         }
     }
 
@@ -134,7 +136,6 @@ public class GameSocketModule {
     private void broadcastGameState(String sessionCode) {
         try {
             GameStateDto gameState = gameSessionService.getGameState(sessionCode);
-            System.out.println("Game State: " + gameState); //TODO: Remove later
             server.getRoomOperations(sessionCode).sendEvent("game_state_update", gameState);
         } catch (EntityNotFoundException e) {
             System.err.println("Attempted to broadcast state for a non-existent or empty session: " + sessionCode);

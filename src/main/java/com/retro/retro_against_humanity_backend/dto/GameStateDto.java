@@ -14,6 +14,7 @@ import java.util.Map;
 @Builder
 public class GameStateDto {
     private String sessionCode;
+    private int roundNumber;
     private Long hostId;
     private Long cardHolderId;
     private List<PlayerDto> players;

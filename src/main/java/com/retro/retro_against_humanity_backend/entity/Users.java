@@ -26,4 +26,7 @@ public class Users {
 
     @Column(name = "games_played", nullable = false)
     private int gamesPlayed = 0;
+
+    @Column(name = "total_points", nullable = false)
+    private int totalPoints = 0;
 }

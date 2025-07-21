@@ -98,8 +98,7 @@ public class CardService {
 
     @Transactional
     public void submitComment(String sessionCode, long sessionCardId, String commentText, Long authorUserId) {
-        SessionPlayer authorPlayer = sessionPlayerRepository.findBySessionCodeAndUserId(sessionCode, authorUserId)
-                .orElseThrow(() -> new EntityNotFoundException("Player not found in session"));
+        SessionPlayer authorPlayer = getSessionPlayer(sessionCode, authorUserId);
 
         SessionCard sessionCard = sessionCardRepository.findById(sessionCardId)
                 .orElseThrow(() -> new EntityNotFoundException("Played card not found"));
@@ -113,11 +112,9 @@ public class CardService {
 
     @Transactional
     public void voteComment(String sessionCode, Long commentId, Long voterUserId) {
-        SessionPlayer voter = sessionPlayerRepository.findBySessionCodeAndUserId(sessionCode, voterUserId)
-                .orElseThrow(() -> new EntityNotFoundException("Player not found in session: " + voterUserId));
-
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("Comment not found: " + commentId));
+        SessionPlayer voter = getSessionPlayer(sessionCode, voterUserId);
+        Comment comment = getCommentById(commentId);
+        SessionPlayer author = comment.getAuthorPlayer();
 
         if (comment.getAuthorPlayer().getId().equals(voter.getId())) {
 //            throw new IllegalStateException("Players cannot vote for their own comments.");
@@ -128,9 +125,22 @@ public class CardService {
 
         if (existingVote.isPresent()) {
             voteRepository.delete(existingVote.get());
+            author.setScore(author.getScore() - 1);
         } else {
             Vote newVote = new Vote(commentId, voter);
             voteRepository.save(newVote);
+            author.setScore(author.getScore() + 1);
         }
+        sessionPlayerRepository.save(author);
     }
+
+    private SessionPlayer getSessionPlayer(String sessionCode, Long userId) {
+        return sessionPlayerRepository.findBySessionCodeAndUserId(sessionCode, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Player not found in session: " + userId));
+    }
+
+    private Comment getCommentById(Long commentId) {
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new EntityNotFoundException("Comment not found: " + commentId));
+        }
 }
