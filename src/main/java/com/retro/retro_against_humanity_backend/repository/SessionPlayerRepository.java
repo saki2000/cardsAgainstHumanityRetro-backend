@@ -13,7 +13,6 @@ import java.util.Optional;
 
 @Repository
 public interface SessionPlayerRepository extends JpaRepository<SessionPlayer, Long> {
-    boolean existsByUserAndSession(Users user, ActiveSession session);
     List<SessionPlayer> findBySession(ActiveSession session);
     void deleteByUserAndSession(Users user, ActiveSession session);
     Optional<SessionPlayer> findByUserAndSession(Users user, ActiveSession session);

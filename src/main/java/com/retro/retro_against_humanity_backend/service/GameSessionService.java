@@ -27,6 +27,7 @@ public class GameSessionService {
     private final UserRepository userRepository;
     private final CardService cardService;
     private final SessionHistoryRepository sessionHistoryRepository;
+    private final UserService userService;
 
     @Transactional
     public Users joinSession(String sessionCode, String username, String email) {
@@ -107,11 +108,10 @@ public class GameSessionService {
 
     @Transactional
     public void endSession(String sessionCode) {
-//        ActiveSession session = sessionRepository.findByCode(sessionCode)
-//                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionCode));
-//        sessionRepository.delete(session);
-        //TODO: Probably not needed, as sessions are deleted when the last player leaves
-        //TODO: implement logic to save points, etc. before deleting the session
+        ActiveSession session = getSessionByCode(sessionCode);
+
+        updateHistoryScores(session);
+        userService.updateStatsOnGameEnd(session);
     }
 
     @Transactional
@@ -151,12 +151,15 @@ public class GameSessionService {
     }
 
     private int addToSessionHistory(ActiveSession session, Users user) {
+        //TODO: check? to prevent some race conditions ?
+        ActiveSession managedSession = getSessionByCode(session.getCode());
+
         return sessionHistoryRepository.findByUserAndSession(user, session)
                 .map(SessionHistory::getScore)
                 .orElseGet(() -> {
                     SessionHistory newHistory = new SessionHistory();
                     newHistory.setUser(user);
-                    newHistory.setSession(session);
+                    newHistory.setSession(managedSession);
                     newHistory.setScore(0);
                     sessionHistoryRepository.save(newHistory);
                     return 0;
@@ -237,9 +240,12 @@ public class GameSessionService {
     }
 
     private void updateHistoryScores(ActiveSession session){
-        List<SessionPlayer> players = sessionPlayerRepository.findBySession(session);
+        //TODO: check? to prevent some race conditions ?
+        ActiveSession managedSession = getSessionByCode(session.getCode());
+
+        List<SessionPlayer> players = sessionPlayerRepository.findBySession(managedSession);
         for (SessionPlayer player : players) {
-            sessionHistoryRepository.findByUserAndSession(player.getUser(), session)
+            sessionHistoryRepository.findByUserAndSession(player.getUser(), managedSession)
                     .ifPresent(history -> {
                         history.setScore(player.getScore());
                         sessionHistoryRepository.save(history);
