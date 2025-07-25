@@ -28,6 +28,7 @@ public class GameSessionService {
     private final CardService cardService;
     private final SessionHistoryRepository sessionHistoryRepository;
     private final UserService userService;
+    private final MessageService messageService;
 
     @Transactional
     public Users joinSession(String sessionCode, String username, String email) {
@@ -74,6 +75,8 @@ public class GameSessionService {
 
         List<SessionPlayer> players = sessionPlayerRepository.findBySessionOrderByTurnOrderAsc(session);
         if (players.isEmpty()) {
+            updateHistoryScores(session);
+            messageService.sendResults(session);
             return EndRoundResult.sessionEnded();
         }
 
@@ -111,6 +114,7 @@ public class GameSessionService {
         ActiveSession session = getSessionByCode(sessionCode);
 
         updateHistoryScores(session);
+        messageService.sendResults(session);
         userService.updateStatsOnGameEnd(session);
     }
 
