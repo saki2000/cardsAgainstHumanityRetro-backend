@@ -11,10 +11,10 @@ import java.util.List;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-    @Query("SELECT new com.retro.retro_against_humanity_backend.dto.CardCommentDTO(card.content, comment.content) " +
+    @Query("SELECT card.content, card.type, comment.content " +
             "FROM Comment comment " +
             "JOIN comment.sessionCard sc " +
             "JOIN sc.card card " +
             "WHERE (:sessionId IS NULL OR sc.session.id = :sessionId)")
-    List<CardCommentDTO> findCardContentAndCommentsBySessionId(Long sessionId);
+    List<Object[]> findCardContentTypeAndCommentBySessionId(Long sessionId);
 }
